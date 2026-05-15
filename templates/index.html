@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arc Prediction DEX - Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        :root { --arc-blue: #1a73e8; --arc-dark: #0d1117; --arc-card: #161b22; --arc-border: #30363d; }
+        body { background: var(--arc-dark); color: #e6edf3; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        .card { background: var(--arc-card); border: 1px solid var(--arc-border); border-radius: 12px; }
+        .card-header { border-bottom: 1px solid var(--arc-border); color: #e6edf3; }
+        .stat-card { text-align: center; padding: 20px; }
+        .stat-value { font-size: 2rem; font-weight: 700; color: var(--arc-blue); }
+        .stat-label { font-size: 0.85rem; color: #8b949e; margin-top: 4px; }
+        .market-row { border-bottom: 1px solid var(--arc-border); padding: 16px 0; }
+        .market-row:hover { background: rgba(26, 115, 232, 0.05); }
+        .outcome-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
+        .outcome-yes { background: rgba(46, 160, 67, 0.15); color: #3fb950; }
+        .outcome-no { background: rgba(248, 81, 73, 0.15); color: #f85149; }
+        .price-bar { height: 8px; border-radius: 4px; background: #21262d; overflow: hidden; }
+        .price-fill-yes { background: linear-gradient(90deg, #3fb950, #2ea043); height: 100%; border-radius: 4px; transition: width 0.5s; }
+        .price-fill-no { background: linear-gradient(90deg, #f85149, #da3633); height: 100%; border-radius: 4px; transition: width 0.5s; }
+        .volume-pill { background: rgba(26, 115, 232, 0.1); color: var(--arc-blue); padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; }
+        .nav-brand { font-weight: 700; font-size: 1.3rem; color: var(--arc-blue) !important; }
+        .bg-arc { background: var(--arc-card); }
+        .text-muted-arc { color: #8b949e; }
+        .table-dark-custom { color: #e6edf3; }
+        .table-dark-custom th { border-color: var(--arc-border); color: #8b949e; font-weight: 600; font-size: 0.8rem; text-transform: uppercase; }
+        .table-dark-custom td { border-color: var(--arc-border); vertical-align: middle; }
+        .category-badge { font-size: 0.7rem; padding: 2px 8px; border-radius: 10px; background: rgba(139, 148, 158, 0.1); color: #8b949e; }
+        .btn-arc { background: var(--arc-blue); color: white; border: none; }
+        .btn-arc:hover { background: #1557b0; color: white; }
+        .status-open { color: #3fb950; }
+        .status-closed { color: #f85149; }
+        .status-resolved { color: #d29922; }
+        .market-question { font-weight: 600; font-size: 1rem; color: #e6edf3; text-decoration: none; }
+        .market-question:hover { color: var(--arc-blue); }
+        .api-link { color: #8b949e; font-size: 0.8rem; text-decoration: none; }
+        .api-link:hover { color: var(--arc-blue); }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-dark bg-arc border-bottom border-dark">
+        <div class="container">
+            <a class="navbar-brand nav-brand" href="/">
+                <i class="bi bi-graph-up-arrow"></i> Arc Prediction DEX
+            </a>
+            <div class="d-flex align-items-center gap-3">
+                <a href="/api/health" class="api-link"><i class="bi bi-code-slash"></i> API</a>
+                <span class="badge bg-success">Live</span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- Stats Cards -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-3">
+                <div class="card stat-card">
+                    <div class="stat-value">{{ stats.total_markets }}</div>
+                    <div class="stat-label">Total Markets</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stat-card">
+                    <div class="stat-value">{{ stats.open_markets }}</div>
+                    <div class="stat-label">Open Markets</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stat-card">
+                    <div class="stat-value">$--</div>
+                    <div class="stat-label">24h Volume</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stat-card">
+                    <div class="stat-value">$--</div>
+                    <div class="stat-label">Total TVL</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Markets Section -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-bar-chart-line"></i> Active Markets</h5>
+                <div class="d-flex gap-2">
+                    <span class="category-badge">All</span>
+                    <span class="category-badge">Crypto</span>
+                    <span class="category-badge">Sports</span>
+                    <span class="category-badge">Politics</span>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                {% if markets %}
+                <table class="table table-dark-custom mb-0">
+                    <thead>
+                        <tr>
+                            <th>Market</th>
+                            <th>YES Price</th>
+                            <th>Volume</th>
+                            <th>Status</th>
+                            <th>Category</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for mkt in markets %}
+                        <tr>
+                            <td>
+                                <div class="market-question">{{ mkt.question }}</div>
+                                <small class="text-muted-arc">ID: {{ mkt.market_id }}</small>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="outcome-badge outcome-yes">YES</span>
+                                    <span>$0.50</span>
+                                </div>
+                                <div class="price-bar mt-1" style="width: 100px;">
+                                    <div class="price-fill-yes" style="width: 50%;"></div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="volume-pill">${{ "%.0f"|format(mkt.total_volume or 0) }}</span>
+                            </td>
+                            <td>
+                                <span class="status-{{ mkt.status|lower }}">{{ mkt.status }}</span>
+                            </td>
+                            <td>
+                                <span class="category-badge">{{ mkt.category }}</span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-inbox" style="font-size: 3rem; color: #30363d;"></i>
+                    <p class="text-muted-arc mt-2">No active markets yet. Create one via the API!</p>
+                    <code class="text-muted-arc">POST /api/markets</code>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- API Reference -->
+        <div class="card mt-4 mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-code-slash"></i> API Quick Reference</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <h6 class="text-muted-arc">Markets</h6>
+                        <ul class="list-unstyled small">
+                            <li><code>GET /api/markets</code> - List markets</li>
+                            <li><code>POST /api/markets</code> - Create market</li>
+                            <li><code>GET /api/markets/:id</code> - Market details</li>
+                            <li><code>GET /api/markets/search?q=</code> - Search</li>
+                            <li><code>GET /api/markets/trending</code> - Trending</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-4">
+                        <h6 class="text-muted-arc">Trading</h6>
+                        <ul class="list-unstyled small">
+                            <li><code>POST /api/trade/amm/buy</code> - AMM buy</li>
+                            <li><code>POST /api/trade/amm/sell</code> - AMM sell</li>
+                            <li><code>POST /api/trade/orderbook/limit</code> - Limit order</li>
+                            <li><code>POST /api/trade/orderbook/market</code> - Market order</li>
+                            <li><code>GET /api/orderbook/:id</code> - Order book</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-4">
+                        <h6 class="text-muted-arc">Portfolio & More</h6>
+                        <ul class="list-unstyled small">
+                            <li><code>GET /api/portfolio/:user</code> - Portfolio</li>
+                            <li><code>GET /api/portfolio/:user/pnl</code> - P&L</li>
+                            <li><code>POST /api/liquidity/add</code> - Add LP</li>
+                            <li><code>POST /api/oracle/propose</code> - Resolve</li>
+                            <li><code>GET /api/analytics/trending</code> - Analytics</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="text-center text-muted-arc py-4 mt-4 border-top" style="border-color: var(--arc-border) !important;">
+        <small>Arc Prediction DEX &middot; Built on <a href="https://docs.arc.network" class="text-info">Arc Network</a>
+        &middot; ~$0.01 fees &middot; Sub-second finality &middot; USDC native</small>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

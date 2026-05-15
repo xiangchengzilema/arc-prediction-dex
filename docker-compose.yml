@@ -1,0 +1,21 @@
+version: "3.8"
+
+services:
+  prediction-dex:
+    build: .
+    ports:
+      - "5003:5003"
+    environment:
+      - PREDICT_DEX_PORT=5003
+      - PREDICT_DEX_DB=/data/prediction_dex.db
+    volumes:
+      - dex_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5003/api/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  dex_data:
