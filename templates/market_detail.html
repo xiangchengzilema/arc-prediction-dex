@@ -122,11 +122,11 @@
 
                         <label class="text-muted-arc" style="font-size:0.85rem;">Amount (USDC)</label>
                         <input type="number" id="amount" class="form-control form-control-arc mb-2"
-                               value="10" min="1" max="1000" step="1" />
+                               value="10" min="1" max="500" step="1" />
                         <div class="d-flex gap-1 mb-3">
                             <button class="btn btn-sm btn-outline-secondary flex-grow-1" data-amt="5">$5</button>
+                            <button class="btn btn-sm btn-outline-secondary flex-grow-1" data-amt="10">$10</button>
                             <button class="btn btn-sm btn-outline-secondary flex-grow-1" data-amt="25">$25</button>
-                            <button class="btn btn-sm btn-outline-secondary flex-grow-1" data-amt="100">$100</button>
                         </div>
 
                         <label class="text-muted-arc" style="font-size:0.85rem;">User ID</label>
@@ -184,11 +184,26 @@
             const d = await r.json();
             $('q-price').textContent = '$' + Number(d.current_price).toFixed(4);
             const slip = d.slippage;
+            let pct = 0;
             if (slip && typeof slip === 'object') {
-                const pct = (slip.slippage_pct ?? slip.slippage ?? 0);
-                $('q-slip').textContent = (pct * 100).toFixed(2) + '%';
+                pct = (slip.slippage_pct ?? slip.slippage ?? 0);
+            }
+            const slipDisplay = $('q-slip');
+            slipDisplay.textContent = (pct * 100).toFixed(2) + '%';
+            // Color-code + disable button if slippage too high
+            const btn = $('btn-buy');
+            if (pct > 0.30) {
+                slipDisplay.style.color = '#f85149';
+                btn.disabled = true;
+                btn.innerHTML = `<i class="bi bi-exclamation-triangle"></i> Slippage too high (${(pct*100).toFixed(0)}%) — try smaller amount`;
+            } else if (pct > 0.10) {
+                slipDisplay.style.color = '#d29922';
+                btn.disabled = false;
+                btn.innerHTML = `<i class="bi bi-lightning-charge-fill"></i> Buy ${side} on Arc`;
             } else {
-                $('q-slip').textContent = '--';
+                slipDisplay.style.color = '#3fb950';
+                btn.disabled = false;
+                btn.innerHTML = `<i class="bi bi-lightning-charge-fill"></i> Buy ${side} on Arc`;
             }
         } catch (e) { /* silent */ }
     }
@@ -245,6 +260,8 @@
                 toast(`Bought ${d.shares_received.toFixed(2)} ${side} shares @ $${Number(d.avg_price).toFixed(4)} avg`);
                 refreshPrice();
                 refreshQuote();
+                // Second refresh after 800ms to show settled state
+                setTimeout(() => { refreshPrice(); refreshQuote(); }, 800);
             } else {
                 toast(d.error || 'Trade failed', false);
             }
