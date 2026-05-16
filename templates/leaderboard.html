@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leaderboard · Pythia</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        :root { --arc-blue: #1a73e8; --arc-dark: #0d1117; --arc-card: #161b22; --arc-border: #30363d; --arc-green:#3fb950; --arc-red:#f85149; --arc-amber:#d29922; --gold:#ffd700; --silver:#c0c0c0; --bronze:#cd7f32; }
+        body { background: var(--arc-dark); color: #e6edf3; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        .card { background: var(--arc-card); border: 1px solid var(--arc-border); border-radius: 12px; }
+        .card-header { border-bottom: 1px solid var(--arc-border); background: rgba(255,255,255,0.01); }
+        .nav-brand { font-weight: 700; font-size: 1.3rem; color: var(--arc-blue) !important; letter-spacing:-0.5px; }
+        .bg-arc { background: var(--arc-card); }
+        .text-muted-arc { color: #8b949e; }
+        a { color: var(--arc-blue); text-decoration: none; }
+        a:hover { color: #4a90e2; }
+        .nav-link-arc { color: #8b949e; font-size: 0.85rem; padding: 0 12px; }
+        .nav-link-arc:hover, .nav-link-arc.active { color: var(--arc-blue); }
+        .table-dark-custom { color: #e6edf3; margin-bottom:0; }
+        .table-dark-custom th { border-color: var(--arc-border); color: #8b949e; font-weight: 600; font-size: 0.72rem; text-transform: uppercase; letter-spacing:0.5px; padding: 10px 12px; }
+        .table-dark-custom td { border-color: var(--arc-border); vertical-align: middle; padding: 14px 12px; }
+        .table-dark-custom tbody tr:hover { background: rgba(26,115,232,0.05); }
+        .rank-badge { display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:50%; font-weight:700; font-size:0.85rem; }
+        .rank-1 { background: rgba(255,215,0,0.15); color: var(--gold); border: 1px solid rgba(255,215,0,0.4); }
+        .rank-2 { background: rgba(192,192,192,0.15); color: var(--silver); border: 1px solid rgba(192,192,192,0.4); }
+        .rank-3 { background: rgba(205,127,50,0.15); color: var(--bronze); border: 1px solid rgba(205,127,50,0.4); }
+        .rank-other { background: rgba(139,148,158,0.1); color: #8b949e; }
+        .pnl-positive { color: var(--arc-green); font-weight:700; }
+        .pnl-negative { color: var(--arc-red); font-weight:700; }
+        .pnl-neutral { color: #c9d1d9; }
+        .user-pill { display:inline-block; background: rgba(26,115,232,0.1); border:1px solid rgba(26,115,232,0.2); padding:3px 10px; border-radius:12px; font-size:0.85rem; font-weight:600; color: var(--arc-blue); }
+        .user-pill.pythia { background: rgba(63,185,80,0.1); border-color: rgba(63,185,80,0.3); color: var(--arc-green); }
+        .agent-tag { display:inline-block; background: rgba(63,185,80,0.15); color: var(--arc-green); padding: 1px 6px; border-radius: 4px; font-size:0.65rem; font-weight:700; margin-left:4px; }
+        .stat-mini { background: var(--arc-card); border: 1px solid var(--arc-border); border-radius: 10px; padding: 16px; text-align: center; }
+        .stat-mini-label { color:#8b949e; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; }
+        .stat-mini-value { font-weight:700; font-size:1.4rem; }
+        .empty-state { padding: 60px 20px; text-align: center; color:#8b949e; }
+        .live-dot { display:inline-block; width:7px; height:7px; border-radius:50%; background:#3fb950; box-shadow:0 0 8px #3fb950; animation: pulse 1.6s infinite; }
+        @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-arc border-bottom border-dark">
+        <div class="container">
+            <a class="navbar-brand nav-brand" href="/">
+                <i class="bi bi-cpu"></i> Pythia <span class="text-muted-arc" style="font-weight:400;font-size:0.85rem;">· Prediction DEX on Arc</span>
+            </a>
+            <div class="d-flex align-items-center">
+                <a href="/" class="nav-link-arc"><i class="bi bi-bar-chart-line"></i> Markets</a>
+                <a href="/leaderboard" class="nav-link-arc active"><i class="bi bi-trophy"></i> Leaderboard</a>
+                <a href="/resolve" class="nav-link-arc"><i class="bi bi-shield-check"></i> Resolve</a>
+                <span class="badge bg-success ms-2"><span class="live-dot"></span> Live</span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4" style="max-width: 1100px;">
+        <div class="mb-4">
+            <h3 style="font-weight:700;"><i class="bi bi-trophy text-warning"></i> Trader leaderboard</h3>
+            <p class="text-muted-arc mb-0">Live P&L using current AMM prices. Realized + unrealized across all markets.</p>
+        </div>
+
+        {% if traders %}
+        <div class="row g-2 mb-4">
+            <div class="col-md-3 col-6"><div class="stat-mini">
+                <div class="stat-mini-label">Active traders</div>
+                <div class="stat-mini-value" style="color:var(--arc-blue);">{{ traders|length }}</div>
+            </div></div>
+            <div class="col-md-3 col-6"><div class="stat-mini">
+                <div class="stat-mini-label">Total trades</div>
+                <div class="stat-mini-value">{{ traders|sum(attribute='total_trades', start=0) }}</div>
+            </div></div>
+            <div class="col-md-3 col-6"><div class="stat-mini">
+                <div class="stat-mini-label">Best trader P&L</div>
+                <div class="stat-mini-value pnl-positive">+${{ "%.2f"|format(traders[0].live_pnl or 0) }}</div>
+            </div></div>
+            <div class="col-md-3 col-6"><div class="stat-mini">
+                <div class="stat-mini-label">Total volume</div>
+                <div class="stat-mini-value">${{ "{:,.0f}".format(traders|sum(attribute='total_volume', start=0) or 0) }}</div>
+            </div></div>
+        </div>
+
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">Rankings · sorted by live total P&L</h6>
+                <span class="text-muted-arc" style="font-size:0.78rem;"><span class="live-dot"></span> live</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                <table class="table table-dark-custom">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Trader</th>
+                            <th>Total P&L</th>
+                            <th>Realized</th>
+                            <th>Unrealized</th>
+                            <th>Trades</th>
+                            <th>Volume</th>
+                            <th>Open</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for t in traders %}
+                        <tr>
+                            <td>
+                                {% if loop.index == 1 %}<span class="rank-badge rank-1">1</span>
+                                {% elif loop.index == 2 %}<span class="rank-badge rank-2">2</span>
+                                {% elif loop.index == 3 %}<span class="rank-badge rank-3">3</span>
+                                {% else %}<span class="rank-badge rank-other">{{ loop.index }}</span>{% endif %}
+                            </td>
+                            <td>
+                                {% if t.user_id == 'pythia_agent' %}
+                                <span class="user-pill pythia"><i class="bi bi-robot"></i> {{ t.user_id }}</span><span class="agent-tag">AI</span>
+                                {% else %}
+                                <span class="user-pill">{{ t.user_id }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="{% if (t.live_pnl or 0) > 0 %}pnl-positive{% elif (t.live_pnl or 0) < 0 %}pnl-negative{% else %}pnl-neutral{% endif %}">
+                                {% if (t.live_pnl or 0) >= 0 %}+{% endif %}${{ "%.2f"|format(t.live_pnl or 0) }}
+                            </td>
+                            <td class="{% if (t.realized or 0) > 0 %}pnl-positive{% elif (t.realized or 0) < 0 %}pnl-negative{% else %}pnl-neutral{% endif %}">
+                                {% if (t.realized or 0) >= 0 %}+{% endif %}${{ "%.2f"|format(t.realized or 0) }}
+                            </td>
+                            <td class="{% if (t.unrealized or 0) > 0 %}pnl-positive{% elif (t.unrealized or 0) < 0 %}pnl-negative{% else %}pnl-neutral{% endif %}">
+                                {% if (t.unrealized or 0) >= 0 %}+{% endif %}${{ "%.2f"|format(t.unrealized or 0) }}
+                            </td>
+                            <td class="text-muted-arc">{{ t.total_trades or 0 }}</td>
+                            <td class="text-muted-arc">${{ "{:,.0f}".format(t.total_volume or 0) }}</td>
+                            <td class="text-muted-arc">{{ t.open_positions or 0 }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="card">
+            <div class="empty-state">
+                <i class="bi bi-people" style="font-size: 3rem; color: #30363d;"></i>
+                <p class="mt-2 mb-1">No traders yet.</p>
+                <p style="font-size:0.85rem;">Open a position via any market to appear on the leaderboard.</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <footer class="text-center text-muted-arc py-4 mt-4 border-top" style="border-color: var(--arc-border) !important;">
+        <small>Pythia · Built on <a href="https://docs.arc.network" class="text-info">Arc Network</a> · USDC native</small>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    // Auto-refresh every 30s for live P&L
+    setTimeout(() => location.reload(), 30000);
+    </script>
+</body>
+</html>

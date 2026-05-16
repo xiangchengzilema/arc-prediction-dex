@@ -52,6 +52,20 @@
         a { color: var(--arc-blue); text-decoration: none; }
         a:hover { color: #4a90e2; }
         .chart-container { position: relative; height: 240px; }
+        .ob-row { display:grid; grid-template-columns: 1fr 1fr 1fr; padding: 4px 10px; font-size: 0.78rem; font-family: ui-monospace, 'SF Mono', Menlo, monospace; position: relative; align-items:center; }
+        .ob-row.ask { color: #f85149; }
+        .ob-row.bid { color: #3fb950; }
+        .ob-row .qty { text-align: right; color: #c9d1d9; }
+        .ob-row .total { text-align: right; color: #8b949e; }
+        .ob-bg { position:absolute; top:0; right:0; bottom:0; background: rgba(248,81,73,0.10); z-index:0; }
+        .ob-bg.bid { background: rgba(63,185,80,0.10); }
+        .ob-row > * { position: relative; z-index: 1; }
+        .ob-spread { padding: 6px 10px; background: rgba(26,115,232,0.08); color: #8b949e; font-size: 0.72rem; text-align: center; font-family: ui-monospace, 'SF Mono', Menlo, monospace; border-top: 1px solid var(--arc-border); border-bottom: 1px solid var(--arc-border); }
+        .ob-header { display:grid; grid-template-columns: 1fr 1fr 1fr; padding: 6px 10px; font-size: 0.68rem; color:#8b949e; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--arc-border); }
+        .ob-header .qty, .ob-header .total { text-align: right; }
+        .tab-btn { background:transparent; border:none; color:#8b949e; padding:8px 14px; font-weight:600; font-size:0.85rem; border-bottom: 2px solid transparent; }
+        .tab-btn.active { color: var(--arc-blue); border-bottom-color: var(--arc-blue); }
+        .tab-btn:hover { color: #e6edf3; }
     </style>
 </head>
 <body>
@@ -61,7 +75,9 @@
                 <i class="bi bi-cpu"></i> Pythia
             </a>
             <div class="d-flex align-items-center gap-3">
-                <a href="/" class="text-muted-arc" style="font-size:0.85rem;"><i class="bi bi-arrow-left"></i> All markets</a>
+                <a href="/" class="text-muted-arc" style="font-size:0.85rem;"><i class="bi bi-arrow-left"></i> Markets</a>
+                <a href="/leaderboard" class="text-muted-arc" style="font-size:0.85rem;"><i class="bi bi-trophy"></i> Leaderboard</a>
+                <a href="/resolve" class="text-muted-arc" style="font-size:0.85rem;"><i class="bi bi-shield-check"></i> Resolve</a>
                 <span class="badge bg-success"><span class="live-dot"></span> Live on Arc</span>
             </div>
         </div>
@@ -145,6 +161,23 @@
                         <div class="text-center text-muted-arc py-3" style="font-size:0.85rem;">Loading...</div>
                     </div>
                 </div>
+
+                <div class="card mt-3">
+                    <div class="card-header d-flex justify-content-between align-items-center py-2">
+                        <h6 class="mb-0"><i class="bi bi-bar-chart-steps text-primary"></i> Order book (CLOB · YES)</h6>
+                        <span class="text-muted-arc" style="font-size:0.72rem;">Level 2</span>
+                    </div>
+                    <div class="ob-header">
+                        <span>Price</span><span class="qty">Size</span><span class="total">Total</span>
+                    </div>
+                    <div id="ob-asks" style="max-height:160px;overflow-y:auto;display:flex;flex-direction:column-reverse;">
+                        <div class="text-center text-muted-arc py-2" style="font-size:0.78rem;">Loading...</div>
+                    </div>
+                    <div class="ob-spread" id="ob-spread">--</div>
+                    <div id="ob-bids" style="max-height:160px;overflow-y:auto;">
+                        <div class="text-center text-muted-arc py-2" style="font-size:0.78rem;">Loading...</div>
+                    </div>
+                </div>
             </div>
 
             <!-- RIGHT: trade panel -->
@@ -154,7 +187,11 @@
                         <h6 class="mb-0"><i class="bi bi-cart-plus"></i> Place an order</h6>
                         <span class="badge bg-secondary" style="font-size:0.65rem;">USDC native</span>
                     </div>
-                    <div class="card-body">
+                    <div class="d-flex border-bottom border-dark px-2">
+                        <button class="tab-btn active" id="tab-amm" type="button" data-tab="amm">AMM</button>
+                        <button class="tab-btn" id="tab-limit" type="button" data-tab="limit">Limit</button>
+                    </div>
+                    <div class="card-body" id="pane-amm">
                         <div class="d-flex gap-2 mb-3">
                             <button class="outcome-btn active yes" id="btn-yes" type="button" data-outcome="YES">YES</button>
                             <button class="outcome-btn no" id="btn-no" type="button" data-outcome="NO">NO</button>
@@ -187,6 +224,43 @@
                         </button>
                         <div class="text-muted-arc text-center mt-2" style="font-size:0.72rem;">
                             <i class="bi bi-shield-check"></i> Settles via Arc · &lt; 1s finality
+                        </div>
+                    </div>
+                    <div class="card-body" id="pane-limit" style="display:none;">
+                        <div class="d-flex gap-2 mb-3">
+                            <button class="outcome-btn active yes" id="lim-side-buy" type="button" data-lside="BUY">Buy</button>
+                            <button class="outcome-btn no" id="lim-side-sell" type="button" data-lside="SELL">Sell</button>
+                        </div>
+                        <label class="text-muted-arc" style="font-size:0.85rem;">Outcome</label>
+                        <select id="lim-outcome" class="form-control form-control-arc mb-2">
+                            <option value="YES">YES</option>
+                            <option value="NO">NO</option>
+                        </select>
+
+                        <label class="text-muted-arc" style="font-size:0.85rem;">Limit price (0 - 1)</label>
+                        <input type="number" id="lim-price" class="form-control form-control-arc mb-2"
+                               value="0.50" min="0.01" max="0.99" step="0.01" />
+
+                        <label class="text-muted-arc" style="font-size:0.85rem;">Quantity (shares)</label>
+                        <input type="number" id="lim-qty" class="form-control form-control-arc mb-2"
+                               value="20" min="1" step="1" />
+
+                        <label class="text-muted-arc" style="font-size:0.85rem;">User ID</label>
+                        <input type="text" id="lim-user" class="form-control form-control-arc mb-3"
+                               value="demo_user" />
+
+                        <div class="quote-box mb-3">
+                            <div class="quote-row"><span class="label">Order type</span><span>Limit · GTC</span></div>
+                            <div class="quote-row"><span class="label">Total cost</span><span id="lim-total">$10.00</span></div>
+                            <div class="quote-row"><span class="label">Fills if</span><span id="lim-fills">match available</span></div>
+                            <div class="quote-row"><span class="label">Network fee</span><span style="color:#3fb950;">~$0.01 (Arc)</span></div>
+                        </div>
+
+                        <button id="btn-limit" class="btn btn-buy w-100" type="button">
+                            <i class="bi bi-list-check"></i> Place limit order
+                        </button>
+                        <div class="text-muted-arc text-center mt-2" style="font-size:0.72rem;">
+                            <i class="bi bi-info-circle"></i> Resting orders match price-time priority
                         </div>
                     </div>
                 </div>
@@ -433,9 +507,133 @@
     refreshChart();
     refreshTrades();
     refreshQuote();
+    refreshOrderBook();
     setInterval(refreshPrice, 8000);
     setInterval(refreshChart, 30000);
     setInterval(refreshTrades, 12000);
+    setInterval(refreshOrderBook, 8000);
+
+    // ─── Tab switching ───
+    document.querySelectorAll('[data-tab]').forEach(b => {
+        b.addEventListener('click', () => {
+            const t = b.dataset.tab;
+            document.querySelectorAll('[data-tab]').forEach(x => x.classList.toggle('active', x.dataset.tab === t));
+            $('pane-amm').style.display = (t === 'amm') ? 'block' : 'none';
+            $('pane-limit').style.display = (t === 'limit') ? 'block' : 'none';
+        });
+    });
+
+    // ─── Order book ───
+    async function refreshOrderBook() {
+        try {
+            const r = await fetch(`/api/orderbook/${MARKET_ID}?depth=10`);
+            const d = await r.json();
+            const bids = d.bids || [];
+            const asks = d.asks || [];
+            const maxQty = Math.max(
+                ...bids.map(b => b.quantity || 0),
+                ...asks.map(a => a.quantity || 0),
+                1,
+            );
+            let totalAsk = 0;
+            const askRows = asks.map(a => {
+                totalAsk += a.quantity;
+                const w = (a.quantity / maxQty) * 100;
+                return `<div class="ob-row ask">
+                    <div class="ob-bg" style="width:${w}%;"></div>
+                    <span>$${Number(a.price).toFixed(2)}</span>
+                    <span class="qty">${a.quantity.toFixed(0)}</span>
+                    <span class="total">${totalAsk.toFixed(0)}</span>
+                </div>`;
+            }).join('');
+            let totalBid = 0;
+            const bidRows = bids.map(b => {
+                totalBid += b.quantity;
+                const w = (b.quantity / maxQty) * 100;
+                return `<div class="ob-row bid">
+                    <div class="ob-bg bid" style="width:${w}%;"></div>
+                    <span>$${Number(b.price).toFixed(2)}</span>
+                    <span class="qty">${b.quantity.toFixed(0)}</span>
+                    <span class="total">${totalBid.toFixed(0)}</span>
+                </div>`;
+            }).join('');
+            $('ob-asks').innerHTML = askRows || '<div class="text-center text-muted-arc py-2" style="font-size:0.78rem;">No asks</div>';
+            $('ob-bids').innerHTML = bidRows || '<div class="text-center text-muted-arc py-2" style="font-size:0.78rem;">No bids</div>';
+            const sp = $('ob-spread');
+            if (d.best_bid && d.best_ask) {
+                sp.innerHTML = `Spread $${Number(d.spread).toFixed(3)} · Mid $${Number(d.mid_price).toFixed(3)}`;
+            } else {
+                sp.innerHTML = 'No two-sided market';
+            }
+        } catch (e) { /* silent */ }
+    }
+
+    // ─── Limit order ───
+    let limSide = 'BUY';
+    function setLimSide(s) {
+        limSide = s;
+        $('lim-side-buy').classList.toggle('active', s === 'BUY');
+        $('lim-side-sell').classList.toggle('active', s === 'SELL');
+        $('lim-side-buy').classList.toggle('yes', s === 'BUY');
+        $('lim-side-sell').classList.toggle('no', s === 'SELL');
+    }
+    document.querySelectorAll('[data-lside]').forEach(b => {
+        b.addEventListener('click', () => setLimSide(b.dataset.lside));
+    });
+    function refreshLimQuote() {
+        const p = parseFloat($('lim-price').value || 0);
+        const q = parseFloat($('lim-qty').value || 0);
+        $('lim-total').textContent = '$' + (p * q).toFixed(2);
+    }
+    ['lim-price', 'lim-qty'].forEach(id => $(id).addEventListener('input', refreshLimQuote));
+    refreshLimQuote();
+
+    $('btn-limit').addEventListener('click', async () => {
+        const price = parseFloat($('lim-price').value || 0);
+        const qty   = parseFloat($('lim-qty').value || 0);
+        const user  = $('lim-user').value.trim() || 'demo_user';
+        const outcome = $('lim-outcome').value;
+        if (price <= 0 || price >= 1) { toast('Price must be between 0 and 1', false); return; }
+        if (qty < 1) { toast('Quantity must be at least 1', false); return; }
+        const btn = $('btn-limit');
+        btn.disabled = true;
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Submitting...';
+        try {
+            const r = await fetch('/api/trade/orderbook/limit', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    market_id: MARKET_ID,
+                    user_id: user,
+                    side: limSide,
+                    price: price,
+                    quantity: qty,
+                    outcome: outcome,
+                    time_in_force: 'GTC',
+                }),
+            });
+            const d = await r.json();
+            if (r.ok) {
+                const filled = d.filled_quantity || 0;
+                const remaining = d.remaining_quantity || 0;
+                if (filled > 0 && remaining === 0) {
+                    toast(`<i class="bi bi-check-circle-fill text-success"></i> Filled ${filled} ${outcome} @ ~$${Number(d.avg_fill_price || price).toFixed(3)}`);
+                } else if (filled > 0) {
+                    toast(`<i class="bi bi-check-circle-fill text-success"></i> Filled ${filled}, ${remaining} resting on book`);
+                } else {
+                    toast(`<i class="bi bi-list-check text-info"></i> Order placed on book (${qty} @ $${price.toFixed(2)})`);
+                }
+                refreshOrderBook(); refreshTrades(); refreshPrice();
+            } else {
+                toast(d.error || 'Order failed', false);
+            }
+        } catch (e) {
+            toast('Network error', false);
+        }
+        btn.disabled = false;
+        btn.innerHTML = orig;
+    });
     </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>

@@ -74,7 +74,7 @@ def get_amm(market_id: str) -> AMMPool:
     return _amm_pools[market_id]
 
 
-def get_orderbook(market_id: str) -> OrderBook:
+def get_ob(market_id: str) -> OrderBook:
     """Get or create order book for a market."""
     if market_id not in _order_books:
         _order_books[market_id] = OrderBook(market_id, db_path=DB_PATH)
@@ -140,6 +140,72 @@ def market_detail(market_id):
 
     return render_template("market_detail.html", market=market,
                            market_stats=stats)
+
+
+@app.route("/leaderboard")
+def leaderboard_page():
+    """Trader leaderboard page."""
+    try:
+        traders = portfolio.get_leaderboard(sort_by="total_pnl", limit=50)
+    except Exception:
+        traders = []
+    # Enrich with live unrealized P&L
+    enriched = []
+    for t in traders:
+        uid = t.get("user_id")
+        positions = portfolio.get_positions(uid, status="OPEN")
+        cur_prices = {}
+        for pos in positions:
+            mid = pos["market_id"]
+            try:
+                pool = get_amm(mid)
+                yes = pool.get_price("YES")
+                cur_prices[f"{mid}_YES"] = yes
+                cur_prices[f"{mid}_NO"] = 1.0 - yes
+            except Exception:
+                pass
+        try:
+            pnl = portfolio.calculate_pnl(uid, current_prices=cur_prices)
+            t["live_pnl"] = pnl.get("total_pnl", 0)
+            t["unrealized"] = pnl.get("total_unrealized_pnl", 0)
+            t["realized"] = pnl.get("total_realized_pnl", 0)
+            t["open_positions"] = pnl.get("open_positions", 0)
+        except Exception:
+            t["live_pnl"] = 0
+            t["unrealized"] = 0
+            t["realized"] = 0
+            t["open_positions"] = 0
+        enriched.append(t)
+    enriched.sort(key=lambda x: x.get("live_pnl", 0), reverse=True)
+    return render_template("leaderboard.html", traders=enriched,
+                           agent=pythia.snapshot(limit=5))
+
+
+@app.route("/resolve")
+def resolve_page():
+    """Oracle resolution page."""
+    try:
+        pending = oracle.get_pending_resolutions()
+    except Exception:
+        pending = []
+    # Enrich pending with market question
+    for p in pending:
+        try:
+            mkt = market_engine.get_market(p["market_id"])
+            p["market_question"] = mkt.get("question", "") if mkt else ""
+            p["market_status"] = mkt.get("status", "") if mkt else ""
+        except Exception:
+            p["market_question"] = ""
+    # Recently resolved
+    try:
+        all_markets = market_engine.list_markets(status=None, limit=100)
+        resolved = [m for m in all_markets.get("markets", [])
+                    if m.get("status") in ("RESOLVED", "SETTLED")]
+        resolved = resolved[:10]
+    except Exception:
+        resolved = []
+    return render_template("resolve.html", pending=pending, resolved=resolved,
+                           agent=pythia.snapshot(limit=5))
 
 
 # ─── Health & Stats ───────────────────────────────────────────
@@ -369,17 +435,17 @@ def amm_quote():
 # ─── Order Book ───────────────────────────────────────────────
 
 @app.route("/api/orderbook/<market_id>", methods=["GET"])
-def get_orderbook(market_id):
+def get_orderbook_route(market_id):
     """Get order book for a market."""
     depth = int(request.args.get("depth", 20))
-    book = get_orderbook(market_id)
+    book = get_ob(market_id)
     return jsonify(book.get_order_book(depth=depth))
 
 
 @app.route("/api/orderbook/<market_id>/spread", methods=["GET"])
 def get_spread(market_id):
     """Get bid/ask spread analysis."""
-    book = get_orderbook(market_id)
+    book = get_ob(market_id)
     return jsonify(book.get_spread_analysis())
 
 
@@ -387,7 +453,7 @@ def get_spread(market_id):
 def place_limit_order():
     """Place a limit order."""
     data = request.json or {}
-    book = get_orderbook(data.get("market_id", ""))
+    book = get_ob(data.get("market_id", ""))
     try:
         result = book.place_limit_order(
             user_id=data.get("user_id", "anonymous"),
@@ -406,7 +472,7 @@ def place_limit_order():
 def place_market_order():
     """Place a market order."""
     data = request.json or {}
-    book = get_orderbook(data.get("market_id", ""))
+    book = get_ob(data.get("market_id", ""))
     try:
         result = book.place_market_order(
             user_id=data.get("user_id", "anonymous"),
@@ -423,7 +489,7 @@ def place_market_order():
 def cancel_order():
     """Cancel an order."""
     data = request.json or {}
-    book = get_orderbook(data.get("market_id", ""))
+    book = get_ob(data.get("market_id", ""))
     try:
         result = book.cancel_order(data["order_id"], data["user_id"])
         return jsonify(result), 200

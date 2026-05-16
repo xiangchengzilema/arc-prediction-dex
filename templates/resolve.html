@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resolve · Pythia</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        :root { --arc-blue: #1a73e8; --arc-dark: #0d1117; --arc-card: #161b22; --arc-border: #30363d; --arc-green:#3fb950; --arc-red:#f85149; --arc-amber:#d29922; }
+        body { background: var(--arc-dark); color: #e6edf3; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        .card { background: var(--arc-card); border: 1px solid var(--arc-border); border-radius: 12px; }
+        .card-header { border-bottom: 1px solid var(--arc-border); background: rgba(255,255,255,0.01); }
+        .nav-brand { font-weight: 700; font-size: 1.3rem; color: var(--arc-blue) !important; letter-spacing:-0.5px; }
+        .bg-arc { background: var(--arc-card); }
+        .text-muted-arc { color: #8b949e; }
+        a { color: var(--arc-blue); text-decoration: none; }
+        a:hover { color: #4a90e2; }
+        .nav-link-arc { color: #8b949e; font-size: 0.85rem; padding: 0 12px; }
+        .nav-link-arc:hover, .nav-link-arc.active { color: var(--arc-blue); }
+        .form-control-arc { background: #0d1117; border: 1px solid var(--arc-border); color: #e6edf3; }
+        .form-control-arc:focus { background: #0d1117; border-color: var(--arc-blue); color: #e6edf3; box-shadow: 0 0 0 3px rgba(26,115,232,0.2); }
+        .proposal-card { background: rgba(210,153,34,0.05); border: 1px solid rgba(210,153,34,0.25); border-radius: 10px; padding: 16px; margin-bottom: 12px; transition: all 0.2s; }
+        .proposal-card:hover { border-color: rgba(210,153,34,0.5); }
+        .outcome-yes { background: rgba(63,185,80,0.15); color: var(--arc-green); padding: 3px 10px; border-radius: 12px; font-size: 0.75rem; font-weight:700; }
+        .outcome-no { background: rgba(248,81,73,0.15); color: var(--arc-red); padding: 3px 10px; border-radius: 12px; font-size: 0.75rem; font-weight:700; }
+        .status-pill { padding: 3px 10px; border-radius: 12px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; }
+        .status-proposed { background: rgba(210,153,34,0.15); color: var(--arc-amber); }
+        .status-disputed { background: rgba(248,81,73,0.15); color: var(--arc-red); }
+        .status-resolved { background: rgba(63,185,80,0.15); color: var(--arc-green); }
+        .status-settled { background: rgba(26,115,232,0.15); color: var(--arc-blue); }
+        .btn-action { background: var(--arc-blue); color: white; border: none; padding: 7px 14px; border-radius: 6px; font-size: 0.82rem; font-weight: 600; transition: all 0.15s; }
+        .btn-action:hover { background: #1557b0; color: white; }
+        .btn-action.danger { background: var(--arc-red); }
+        .btn-action.danger:hover { background: #da3633; }
+        .btn-action.success { background: var(--arc-green); }
+        .btn-action.success:hover { background: #2ea043; }
+        .evidence-block { background: rgba(0,0,0,0.2); border-left: 3px solid var(--arc-amber); padding: 10px 14px; margin-top: 10px; font-size: 0.85rem; color: #c9d1d9; border-radius: 0 6px 6px 0; }
+        .info-banner { background: rgba(26,115,232,0.05); border: 1px solid rgba(26,115,232,0.2); border-radius: 8px; padding: 14px; margin-bottom: 16px; font-size:0.85rem; color:#c9d1d9; }
+        .toast-container { position: fixed; top: 80px; right: 20px; z-index: 1080; }
+        .empty-state { padding: 40px 20px; text-align: center; color:#8b949e; }
+        .live-dot { display:inline-block; width:7px; height:7px; border-radius:50%; background:#3fb950; box-shadow:0 0 8px #3fb950; animation: pulse 1.6s infinite; }
+        @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+        .resolved-row { padding: 10px 14px; border-bottom: 1px solid var(--arc-border); display: flex; justify-content: space-between; align-items: center; font-size: 0.88rem; }
+        .resolved-row:last-child { border-bottom: none; }
+        .winner-badge { font-weight: 700; font-size: 0.78rem; padding: 2px 8px; border-radius: 4px; }
+        .winner-yes { background: rgba(63,185,80,0.15); color: var(--arc-green); }
+        .winner-no  { background: rgba(248,81,73,0.15); color: var(--arc-red); }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-arc border-bottom border-dark">
+        <div class="container">
+            <a class="navbar-brand nav-brand" href="/">
+                <i class="bi bi-cpu"></i> Pythia <span class="text-muted-arc" style="font-weight:400;font-size:0.85rem;">· Prediction DEX on Arc</span>
+            </a>
+            <div class="d-flex align-items-center">
+                <a href="/" class="nav-link-arc"><i class="bi bi-bar-chart-line"></i> Markets</a>
+                <a href="/leaderboard" class="nav-link-arc"><i class="bi bi-trophy"></i> Leaderboard</a>
+                <a href="/resolve" class="nav-link-arc active"><i class="bi bi-shield-check"></i> Resolve</a>
+                <span class="badge bg-success ms-2"><span class="live-dot"></span> Live</span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4" style="max-width: 1100px;">
+        <div class="mb-3">
+            <h3 style="font-weight:700;"><i class="bi bi-shield-check text-success"></i> Optimistic oracle</h3>
+            <p class="text-muted-arc mb-0">UMA-style resolution flow: anyone can propose with a bond. Disputed proposals go to vote. Auto-finalizes after the dispute window.</p>
+        </div>
+
+        <div class="info-banner">
+            <i class="bi bi-info-circle text-info"></i>
+            <strong>How it works:</strong> 1. Propose with bond → 2. Dispute window (24h) → 3. If undisputed, finalizes & settles · If disputed, voting decides → 4. Winners claim, losing bond is slashed.
+        </div>
+
+        <div class="row g-3">
+            <div class="col-lg-7">
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h6 class="mb-0"><i class="bi bi-clock-history text-warning"></i> Pending proposals
+                            <span class="text-muted-arc" style="font-size:0.78rem;font-weight:400;">({{ pending|length }})</span>
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        {% if pending %}
+                            {% for p in pending %}
+                            <div class="proposal-card" data-proposal-id="{{ p.proposal_id }}">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div style="flex:1;min-width:0;">
+                                        <div style="font-weight:600;font-size:0.95rem;line-height:1.3;">{{ p.market_question or p.market_id }}</div>
+                                        <div class="text-muted-arc" style="font-size:0.72rem;font-family:ui-monospace,monospace;margin-top:2px;">{{ p.market_id }}</div>
+                                    </div>
+                                    <span class="status-pill status-{{ p.status|lower if p.status else 'proposed' }}">{{ p.status or 'proposed' }}</span>
+                                </div>
+                                <div class="d-flex gap-3 align-items-center mb-2" style="font-size:0.85rem;">
+                                    <span class="text-muted-arc">Proposed:</span>
+                                    {% if p.proposed_outcome == 'YES' %}<span class="outcome-yes">YES</span>{% else %}<span class="outcome-no">NO</span>{% endif %}
+                                    <span class="text-muted-arc">by</span>
+                                    <span style="color:#c9d1d9;">{{ p.proposer_id }}</span>
+                                    <span class="text-muted-arc">· bond</span>
+                                    <span style="color:#c9d1d9;">${{ "%.0f"|format(p.bond_amount or 0) }}</span>
+                                </div>
+                                {% if p.evidence %}
+                                <div class="evidence-block"><strong>Evidence:</strong> {{ p.evidence }}</div>
+                                {% endif %}
+                                <div class="d-flex gap-2 mt-3">
+                                    <button class="btn-action success" data-action="finalize" data-market-id="{{ p.market_id }}">
+                                        <i class="bi bi-check-circle"></i> Finalize
+                                    </button>
+                                    <button class="btn-action danger" data-action="dispute" data-proposal-id="{{ p.proposal_id }}" data-counter="{% if p.proposed_outcome == 'YES' %}NO{% else %}YES{% endif %}">
+                                        <i class="bi bi-exclamation-triangle"></i> Dispute (counter: {% if p.proposed_outcome == 'YES' %}NO{% else %}YES{% endif %})
+                                    </button>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="empty-state">
+                                <i class="bi bi-check2-circle" style="font-size:2.5rem;color:#30363d;"></i>
+                                <p class="mt-2 mb-0">No pending proposals.</p>
+                                <p style="font-size:0.85rem;">Propose a resolution for any open market on the right.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0"><i class="bi bi-archive text-info"></i> Recently resolved <span class="text-muted-arc" style="font-size:0.78rem;font-weight:400;">({{ resolved|length }})</span></h6>
+                    </div>
+                    <div class="card-body p-0">
+                        {% if resolved %}
+                            {% for m in resolved %}
+                            <div class="resolved-row">
+                                <div style="flex:1;min-width:0;padding-right:12px;">
+                                    <div style="font-weight:600;line-height:1.3;">{{ m.question }}</div>
+                                    <div class="text-muted-arc" style="font-size:0.72rem;">{{ m.market_id }}</div>
+                                </div>
+                                <div class="text-end">
+                                    {% if m.winning_outcome %}
+                                    <span class="winner-badge winner-{{ m.winning_outcome|lower }}">{{ m.winning_outcome }} won</span>
+                                    {% endif %}
+                                    <span class="status-pill status-{{ m.status|lower }} ms-2">{{ m.status }}</span>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="empty-state">
+                                <i class="bi bi-inbox" style="font-size:2rem;color:#30363d;"></i>
+                                <p class="mt-2 mb-0" style="font-size:0.85rem;">No resolved markets yet.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-5">
+                <div class="card sticky-top" style="top:20px;">
+                    <div class="card-header"><h6 class="mb-0"><i class="bi bi-megaphone"></i> Propose resolution</h6></div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="text-muted-arc" style="font-size:0.85rem;">Market</label>
+                            <select id="propose-market" class="form-control form-control-arc">
+                                <option value="">-- Select an open market --</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="text-muted-arc" style="font-size:0.85rem;">Outcome</label>
+                            <div class="d-flex gap-2">
+                                <button class="btn-action flex-grow-1" id="prop-yes" data-outcome="YES" style="background:rgba(63,185,80,0.15);color:#3fb950;border:1px solid rgba(63,185,80,0.4);">YES</button>
+                                <button class="btn-action flex-grow-1" id="prop-no" data-outcome="NO" style="background:transparent;color:#8b949e;border:1px solid var(--arc-border);">NO</button>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="text-muted-arc" style="font-size:0.85rem;">Proposer ID</label>
+                            <input type="text" id="propose-user" class="form-control form-control-arc" value="oracle_node_2" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="text-muted-arc" style="font-size:0.85rem;">Bond (USDC)</label>
+                            <input type="number" id="propose-bond" class="form-control form-control-arc" value="500" min="100" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="text-muted-arc" style="font-size:0.85rem;">Evidence</label>
+                            <textarea id="propose-evidence" class="form-control form-control-arc" rows="3" placeholder="URL or description of supporting data...">Source: official announcement on tagged date.</textarea>
+                        </div>
+                        <button class="btn-action w-100" id="btn-propose" style="padding:11px;font-weight:700;">
+                            <i class="bi bi-send"></i> Propose resolution
+                        </button>
+                        <div class="text-muted-arc text-center mt-2" style="font-size:0.72rem;">
+                            <i class="bi bi-shield-lock"></i> Bonds locked until finalize · ~$0.01 fee on Arc
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toasts"></div>
+
+    <footer class="text-center text-muted-arc py-4 mt-4 border-top" style="border-color: var(--arc-border) !important;">
+        <small>Pythia · Built on <a href="https://docs.arc.network" class="text-info">Arc Network</a> · UMA-style optimistic oracle</small>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    let proposeOutcome = 'YES';
+
+    function $(id) { return document.getElementById(id); }
+    function toast(msg, ok=true) {
+        const el = document.createElement('div');
+        el.className = 'toast show mb-2';
+        el.style.background = ok ? '#1a3a26' : '#3a1a1a';
+        el.style.border = `1px solid ${ok ? '#3fb950' : '#f85149'}`;
+        el.style.color = '#e6edf3';
+        el.style.minWidth = '320px';
+        el.innerHTML = `<div class="toast-body">${msg}</div>`;
+        $('toasts').appendChild(el);
+        setTimeout(() => el.remove(), 5000);
+    }
+
+    // Load open markets into propose dropdown
+    async function loadMarkets() {
+        try {
+            const r = await fetch('/api/markets?status=OPEN&limit=50');
+            const d = await r.json();
+            const sel = $('propose-market');
+            (d.markets || []).forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m.market_id;
+                opt.textContent = m.question.length > 60 ? m.question.slice(0,60) + '...' : m.question;
+                sel.appendChild(opt);
+            });
+        } catch (e) {}
+    }
+    loadMarkets();
+
+    // Outcome toggle
+    document.querySelectorAll('[data-outcome]').forEach(b => {
+        b.addEventListener('click', () => {
+            proposeOutcome = b.dataset.outcome;
+            const yesBtn = $('prop-yes'), noBtn = $('prop-no');
+            if (proposeOutcome === 'YES') {
+                yesBtn.style.background = 'rgba(63,185,80,0.15)';
+                yesBtn.style.color = '#3fb950';
+                yesBtn.style.borderColor = 'rgba(63,185,80,0.4)';
+                noBtn.style.background = 'transparent';
+                noBtn.style.color = '#8b949e';
+                noBtn.style.borderColor = 'var(--arc-border)';
+            } else {
+                noBtn.style.background = 'rgba(248,81,73,0.15)';
+                noBtn.style.color = '#f85149';
+                noBtn.style.borderColor = 'rgba(248,81,73,0.4)';
+                yesBtn.style.background = 'transparent';
+                yesBtn.style.color = '#8b949e';
+                yesBtn.style.borderColor = 'var(--arc-border)';
+            }
+        });
+    });
+
+    // Propose
+    $('btn-propose').addEventListener('click', async () => {
+        const mid = $('propose-market').value;
+        if (!mid) { toast('Select a market first', false); return; }
+        const body = {
+            market_id: mid,
+            outcome: proposeOutcome,
+            proposer_id: $('propose-user').value.trim() || 'oracle_node',
+            bond_amount: parseFloat($('propose-bond').value || 500),
+            evidence: $('propose-evidence').value,
+        };
+        try {
+            const r = await fetch('/api/oracle/propose', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(body),
+            });
+            const d = await r.json();
+            if (r.ok) {
+                toast('Proposal submitted on Arc');
+                setTimeout(() => location.reload(), 1200);
+            } else {
+                toast(d.error || 'Proposal failed', false);
+            }
+        } catch (e) { toast('Network error', false); }
+    });
+
+    // Finalize / Dispute buttons
+    document.querySelectorAll('[data-action="finalize"]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const mid = btn.dataset.marketId;
+            if (!confirm('Finalize this resolution and settle the market?')) return;
+            try {
+                const r = await fetch(`/api/oracle/finalize/${mid}`, { method: 'POST' });
+                const d = await r.json();
+                if (r.ok) {
+                    toast('Resolution finalized — market settled');
+                    setTimeout(() => location.reload(), 1200);
+                } else {
+                    toast(d.error || 'Finalize failed', false);
+                }
+            } catch (e) { toast('Network error', false); }
+        });
+    });
+
+    document.querySelectorAll('[data-action="dispute"]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const pid = btn.dataset.proposalId;
+            const counter = btn.dataset.counter;
+            const evidence = prompt(`Disputing with counter outcome: ${counter}\nProvide evidence:`);
+            if (!evidence) return;
+            try {
+                const r = await fetch('/api/oracle/dispute', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        proposal_id: pid,
+                        disputer_id: 'disputer_user',
+                        counter_outcome: counter,
+                        evidence: evidence,
+                    }),
+                });
+                const d = await r.json();
+                if (r.ok) {
+                    toast('Dispute filed — voting opens');
+                    setTimeout(() => location.reload(), 1200);
+                } else {
+                    toast(d.error || 'Dispute failed', false);
+                }
+            } catch (e) { toast('Network error', false); }
+        });
+    });
+    </script>
+</body>
+</html>
