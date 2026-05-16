@@ -586,6 +586,63 @@ def cancel_order():
         return jsonify({"error": str(e)}), 400
 
 
+@app.route("/api/orders/<user_id>", methods=["GET"])
+def get_user_open_orders(user_id):
+    """Aggregate a user's open limit orders across every market."""
+    status_filter = request.args.get("status")  # OPEN/PARTIALLY_FILLED/None=both
+    all_markets = market_engine.list_markets(limit=500).get("markets", [])
+    rows = []
+    for m in all_markets:
+        mid = m["market_id"]
+        try:
+            book = get_ob(mid)
+            orders = book.get_user_orders(user_id, status=status_filter)
+        except Exception:
+            orders = []
+        for o in orders:
+            if o.get("status") not in ("OPEN", "PARTIALLY_FILLED"):
+                continue
+            rows.append({
+                "order_id": o.get("order_id"),
+                "market_id": mid,
+                "market_question": m.get("question"),
+                "side": o.get("side"),
+                "outcome": o.get("outcome"),
+                "price": o.get("price"),
+                "quantity": o.get("quantity"),
+                "remaining_quantity": o.get("remaining_quantity"),
+                "filled_quantity": o.get("filled_quantity", 0),
+                "status": o.get("status"),
+                "time_in_force": o.get("time_in_force"),
+                "created_at": o.get("created_at"),
+            })
+    rows.sort(key=lambda r: r.get("created_at") or "", reverse=True)
+    return jsonify({"user_id": user_id, "count": len(rows), "orders": rows})
+
+
+@app.route("/orders")
+@app.route("/orders/<user_id>")
+def orders_page(user_id="alice"):
+    """Open limit-orders manager — list + cancel."""
+    user_id = request.args.get("user", user_id)
+    all_markets = market_engine.list_markets(limit=500).get("markets", [])
+    open_rows = []
+    for m in all_markets:
+        mid = m["market_id"]
+        try:
+            book = get_ob(mid)
+            for o in book.get_user_orders(user_id):
+                if o.get("status") not in ("OPEN", "PARTIALLY_FILLED"):
+                    continue
+                open_rows.append({**o,
+                                   "market_id": mid,
+                                   "market_question": m.get("question")})
+        except Exception:
+            continue
+    open_rows.sort(key=lambda r: r.get("created_at") or "", reverse=True)
+    return render_template("orders.html", user_id=user_id, orders=open_rows)
+
+
 # ─── Liquidity ────────────────────────────────────────────────
 
 @app.route("/api/liquidity/add", methods=["POST"])
