@@ -49,9 +49,41 @@ DEMO_TRADES = [
 def seed_if_empty(db_path: str = None):
     db_path = db_path or os.environ.get("PREDICT_DEX_DB", "prediction_dex.db")
     engine = MarketEngine(db_path=db_path)
+
+    # Guard against concurrent seeding by multiple gunicorn workers using a
+    # named SQLite lock table — first writer wins, others bail.
+    import sqlite3, time
+    conn = sqlite3.connect(db_path, timeout=10)
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("""CREATE TABLE IF NOT EXISTS _seed_lock (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        seeded_at TEXT NOT NULL
+    )""")
+    conn.commit()
+    cur = conn.execute("SELECT seeded_at FROM _seed_lock WHERE id = 1")
+    row = cur.fetchone()
+    if row:
+        conn.close()
+        # Another worker already seeded markets. Still try to backfill trades
+        # if volume is empty (handles redeploys where DB persists but volume==0).
+        existing = engine.list_markets(limit=100)
+        _seed_trades_if_needed(db_path, engine, existing)
+        return False
+
+    try:
+        conn.execute("INSERT INTO _seed_lock (id, seeded_at) VALUES (1, ?)",
+                     (time.strftime("%Y-%m-%dT%H:%M:%SZ"),))
+        conn.commit()
+    except sqlite3.IntegrityError:
+        conn.close()
+        existing = engine.list_markets(limit=100)
+        _seed_trades_if_needed(db_path, engine, existing)
+        return False
+    conn.close()
+
+    # We hold the seed lock — create markets fresh.
     existing = engine.list_markets(limit=100)
     market_ids = [m["market_id"] for m in existing.get("markets", [])]
-
     if existing.get("total", 0) == 0:
         liquidity_mgr = LiquidityPoolManager(db_path=db_path)
         market_ids = []
@@ -69,33 +101,30 @@ def seed_if_empty(db_path: str = None):
             pool.initialize(m["initial_liquidity"], creator_id="demo_seed")
             liquidity_mgr.create_pool(mid, m["initial_liquidity"], "demo_seed")
             engine.open_market(mid, initial_liquidity=m["initial_liquidity"])
+        existing = engine.list_markets(limit=100)
 
-    # Seed trades only if no volume yet (idempotent across redeploys)
-    needs_trades = all(
-        m.get("total_volume", 0) == 0 for m in existing.get("markets", [])
-    ) if existing.get("total", 0) > 0 else True
-
-    if needs_trades and len(market_ids) >= 4:
-        # Sort markets by created_at to get consistent ordering matching DEMO_MARKETS
-        sorted_markets = sorted(
-            existing.get("markets", []) if existing.get("total", 0) > 0 else [],
-            key=lambda m: m.get("created_at", "")
-        )
-        if sorted_markets:
-            ordered_ids = [m["market_id"] for m in sorted_markets]
-        else:
-            ordered_ids = market_ids
-
-        for t in DEMO_TRADES:
-            if t["market_idx"] >= len(ordered_ids):
-                continue
-            mid = ordered_ids[t["market_idx"]]
-            pool = AMMPool(mid, db_path=db_path)
-            try:
-                pool.buy_outcome(t["outcome"], t["amount"], user_id=t["user"], max_slippage=0.15)
-            except Exception as e:
-                print(f"Seed trade failed for {mid}: {e}")
+    _seed_trades_if_needed(db_path, engine, existing)
     return True
+
+
+def _seed_trades_if_needed(db_path, engine, existing):
+    """Backfill demo trades if all markets have volume==0."""
+    markets = existing.get("markets", [])
+    if not markets:
+        return
+    if not all(m.get("total_volume", 0) == 0 for m in markets):
+        return
+    ordered = sorted(markets, key=lambda m: m.get("created_at", ""))
+    for t in DEMO_TRADES:
+        if t["market_idx"] >= len(ordered):
+            continue
+        mid = ordered[t["market_idx"]]["market_id"]
+        pool = AMMPool(mid, db_path=db_path)
+        try:
+            pool.buy_outcome(t["outcome"], t["amount"], user_id=t["user"],
+                             max_slippage=0.15)
+        except Exception as e:
+            print(f"Seed trade failed for {mid}: {e}")
 
 
 if __name__ == "__main__":
