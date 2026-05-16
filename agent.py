@@ -50,10 +50,13 @@ class PythiaAgent:
     MAX_TRADE_USDC = 25.0   # demo cap per trade
     BANKROLL_USDC = 500.0   # imaginary bankroll for sizing
 
-    def __init__(self, market_engine, get_amm_pool, db_path: str):
+    def __init__(self, market_engine, get_amm_pool, db_path: str,
+                 portfolio=None, analytics=None):
         self.market_engine = market_engine
         self.get_amm = get_amm_pool
         self.db_path = db_path
+        self.portfolio = portfolio
+        self.analytics = analytics
         self.decisions: Deque[AgentDecision] = deque(maxlen=self.LOG_CAPACITY)
         self._stop = threading.Event()
         self._thread: Optional[threading.Thread] = None
@@ -167,6 +170,26 @@ class PythiaAgent:
             )
             shares = result.get("shares_received", 0.0)
             avg_price = result.get("avg_price", ref_price)
+            # Record into portfolio + analytics so dashboard P&L reflects
+            # the agent's positions.
+            if self.portfolio is not None:
+                try:
+                    self.portfolio.open_position(
+                        self.user_id, market_id, outcome, shares, avg_price,
+                        fee=result.get("fee_charged", 0),
+                    )
+                except Exception:
+                    pass
+            if self.analytics is not None:
+                try:
+                    self.analytics.record_volume(market_id, amount, "BUY",
+                                                 self.user_id)
+                except Exception:
+                    pass
+            try:
+                self.market_engine.update_volume(market_id, amount, self.user_id)
+            except Exception:
+                pass
             pnl = (target - avg_price) * shares if outcome == "YES" \
                 else ((1.0 - target) - avg_price) * shares
             rationale = (

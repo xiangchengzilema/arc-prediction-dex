@@ -6,36 +6,52 @@
     <title>{{ market.question[:60] }} · Pythia</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
-        :root { --arc-blue: #1a73e8; --arc-dark: #0d1117; --arc-card: #161b22; --arc-border: #30363d; }
+        :root { --arc-blue: #1a73e8; --arc-dark: #0d1117; --arc-card: #161b22; --arc-border: #30363d; --arc-green:#3fb950; --arc-red:#f85149; }
         body { background: var(--arc-dark); color: #e6edf3; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
         .card { background: var(--arc-card); border: 1px solid var(--arc-border); border-radius: 12px; }
-        .card-header { border-bottom: 1px solid var(--arc-border); }
-        .nav-brand { font-weight: 700; font-size: 1.3rem; color: var(--arc-blue) !important; }
+        .card-header { border-bottom: 1px solid var(--arc-border); background: rgba(255,255,255,0.01); }
+        .nav-brand { font-weight: 700; font-size: 1.3rem; color: var(--arc-blue) !important; letter-spacing:-0.5px; }
         .bg-arc { background: var(--arc-card); }
         .text-muted-arc { color: #8b949e; }
-        .price-display { font-size: 2.4rem; font-weight: 700; }
-        .price-yes { color: #3fb950; }
-        .price-no  { color: #f85149; }
-        .outcome-btn { flex: 1; padding: 14px; border-radius: 8px; border: 2px solid var(--arc-border); background: transparent; color: #e6edf3; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+        .price-display { font-size: 2rem; font-weight: 700; line-height:1; }
+        .price-yes { color: var(--arc-green); }
+        .price-no  { color: var(--arc-red); }
+        .price-tile { background: rgba(255,255,255,0.02); border-radius: 10px; padding: 14px; transition: all 0.2s; }
+        .price-tile.flash { background: rgba(26,115,232,0.15); }
+        .outcome-btn { flex: 1; padding: 14px; border-radius: 8px; border: 2px solid var(--arc-border); background: transparent; color: #e6edf3; font-weight: 600; cursor: pointer; transition: all 0.15s; font-size:0.95rem; }
         .outcome-btn:hover { border-color: var(--arc-blue); }
-        .outcome-btn.active.yes { border-color: #3fb950; background: rgba(63,185,80,0.12); color: #3fb950; }
-        .outcome-btn.active.no  { border-color: #f85149; background: rgba(248,81,73,0.12); color: #f85149; }
+        .outcome-btn.active.yes { border-color: var(--arc-green); background: rgba(63,185,80,0.12); color: var(--arc-green); }
+        .outcome-btn.active.no  { border-color: var(--arc-red); background: rgba(248,81,73,0.12); color: var(--arc-red); }
         .form-control-arc { background: #0d1117; border: 1px solid var(--arc-border); color: #e6edf3; }
         .form-control-arc:focus { background: #0d1117; border-color: var(--arc-blue); color: #e6edf3; box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.2); }
-        .btn-buy { background: linear-gradient(135deg, #1a73e8, #1557b0); color: white; border: none; padding: 12px; font-weight: 700; border-radius: 8px; }
-        .btn-buy:hover { background: linear-gradient(135deg, #1557b0, #0d47a1); color: white; }
-        .btn-buy:disabled { opacity: 0.5; cursor: not-allowed; }
-        .quote-box { background: rgba(26,115,232,0.06); border: 1px solid rgba(26,115,232,0.2); border-radius: 8px; padding: 12px; font-size: 0.88rem; }
-        .quote-row { display: flex; justify-content: space-between; padding: 3px 0; color: #c9d1d9; }
+        .btn-buy { background: linear-gradient(135deg, #1a73e8, #1557b0); color: white; border: none; padding: 13px; font-weight: 700; border-radius: 8px; font-size:1rem; }
+        .btn-buy:hover { background: linear-gradient(135deg, #1557b0, #0d47a1); color: white; transform: translateY(-1px); }
+        .btn-buy:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .quote-box { background: rgba(26,115,232,0.06); border: 1px solid rgba(26,115,232,0.2); border-radius: 8px; padding: 12px; font-size: 0.85rem; }
+        .quote-row { display: flex; justify-content: space-between; padding: 4px 0; color: #c9d1d9; }
         .quote-row .label { color: #8b949e; }
-        .meta-pill { display: inline-block; background: rgba(139,148,158,0.1); color: #8b949e; padding: 3px 10px; border-radius: 12px; font-size: 0.75rem; margin-right: 6px; }
+        .meta-pill { display: inline-block; background: rgba(139,148,158,0.1); color: #8b949e; padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; margin-right: 6px; }
         .toast-container { position: fixed; top: 80px; right: 20px; z-index: 1080; }
-        .price-bar-large { height: 14px; border-radius: 7px; background: #21262d; overflow: hidden; display: flex; }
+        .price-bar-large { height: 12px; border-radius: 6px; background: #21262d; overflow: hidden; display: flex; }
         .pb-yes { background: linear-gradient(90deg, #3fb950, #2ea043); height: 100%; transition: width 0.5s; }
         .pb-no  { background: linear-gradient(90deg, #f85149, #da3633); height: 100%; transition: width 0.5s; }
+        .preset-btn { background:#0d1117; border:1px solid var(--arc-border); color:#c9d1d9; padding:6px 0; border-radius:6px; font-size:0.82rem; transition:all 0.15s; }
+        .preset-btn:hover { border-color: var(--arc-blue); color: var(--arc-blue); }
+        .trade-row { display:flex; justify-content:space-between; align-items:center; padding:7px 10px; border-radius:6px; font-size:0.82rem; transition: background 0.2s; }
+        .trade-row:hover { background: rgba(255,255,255,0.03); }
+        .trade-yes { color: var(--arc-green); }
+        .trade-no { color: var(--arc-red); }
+        .stat-mini { background: rgba(255,255,255,0.02); border-radius: 8px; padding: 12px; }
+        .stat-label { color:#8b949e; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:3px; }
+        .stat-value { font-weight: 700; font-size:1.1rem; }
+        .agent-tag { display:inline-block; background: rgba(26,115,232,0.15); color: var(--arc-blue); padding: 1px 6px; border-radius: 4px; font-size:0.65rem; font-weight:600; margin-left:4px; }
+        .live-dot { display:inline-block; width:7px; height:7px; border-radius:50%; background:#3fb950; box-shadow:0 0 8px #3fb950; animation: pulse 1.6s infinite; }
+        @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
         a { color: var(--arc-blue); text-decoration: none; }
         a:hover { color: #4a90e2; }
+        .chart-container { position: relative; height: 240px; }
     </style>
 </head>
 <body>
@@ -46,36 +62,40 @@
             </a>
             <div class="d-flex align-items-center gap-3">
                 <a href="/" class="text-muted-arc" style="font-size:0.85rem;"><i class="bi bi-arrow-left"></i> All markets</a>
-                <span class="badge bg-success">Live</span>
+                <span class="badge bg-success"><span class="live-dot"></span> Live on Arc</span>
             </div>
         </div>
     </nav>
 
-    <div class="container mt-4" style="max-width: 980px;">
-        <div class="mb-3">
+    <div class="container mt-4" style="max-width: 1100px;">
+        <div class="mb-2">
             <span class="meta-pill"><i class="bi bi-tag"></i> {{ market.category }}</span>
             <span class="meta-pill"><i class="bi bi-circle-fill" style="color:#3fb950;font-size:0.5rem;"></i> {{ market.status }}</span>
             <span class="meta-pill"><i class="bi bi-calendar3"></i> {{ market.deadline[:10] }}</span>
-            <span class="meta-pill"><i class="bi bi-hash"></i> {{ market.market_id }}</span>
+            <span class="meta-pill"><i class="bi bi-hash"></i> {{ market.market_id[:14] }}</span>
         </div>
-        <h2 style="font-weight:700;line-height:1.3;">{{ market.question }}</h2>
+        <h3 style="font-weight:700;line-height:1.3;">{{ market.question }}</h3>
         {% if market.description %}
-        <p class="text-muted-arc">{{ market.description }}</p>
+        <p class="text-muted-arc mb-3">{{ market.description }}</p>
         {% endif %}
 
-        <div class="row g-3 mt-3">
-            <!-- Price + chart -->
-            <div class="col-md-7">
+        <div class="row g-3 mt-2">
+            <!-- LEFT: prices, chart, stats, recent trades -->
+            <div class="col-lg-7">
                 <div class="card mb-3">
                     <div class="card-body">
-                        <div class="row align-items-center">
-                            <div class="col-6 text-center">
-                                <div class="text-muted-arc" style="font-size:0.85rem;">YES probability</div>
-                                <div class="price-display price-yes" id="yes-price">${{ "%.2f"|format(market.yes_price) }}</div>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <div class="price-tile" id="tile-yes">
+                                    <div class="text-muted-arc" style="font-size:0.8rem;">YES probability</div>
+                                    <div class="price-display price-yes" id="yes-price">${{ "%.2f"|format(market.yes_price) }}</div>
+                                </div>
                             </div>
-                            <div class="col-6 text-center">
-                                <div class="text-muted-arc" style="font-size:0.85rem;">NO probability</div>
-                                <div class="price-display price-no" id="no-price">${{ "%.2f"|format(market.no_price) }}</div>
+                            <div class="col-6">
+                                <div class="price-tile" id="tile-no">
+                                    <div class="text-muted-arc" style="font-size:0.8rem;">NO probability</div>
+                                    <div class="price-display price-no" id="no-price">${{ "%.2f"|format(market.no_price) }}</div>
+                                </div>
                             </div>
                         </div>
                         <div class="price-bar-large mt-3">
@@ -89,31 +109,51 @@
                     </div>
                 </div>
 
-                <div class="card">
-                    <div class="card-header"><h6 class="mb-0"><i class="bi bi-bar-chart"></i> Market stats</h6></div>
+                <div class="card mb-3">
+                    <div class="card-header d-flex justify-content-between align-items-center py-2">
+                        <h6 class="mb-0"><i class="bi bi-graph-up-arrow text-info"></i> Price history (YES)</h6>
+                        <span class="text-muted-arc" style="font-size:0.72rem;"><span class="live-dot"></span> 24h</span>
+                    </div>
                     <div class="card-body">
-                        <div class="row text-center">
-                            <div class="col-4">
-                                <div class="text-muted-arc" style="font-size:0.78rem;">Total Volume</div>
-                                <div style="font-weight:700;">${{ "{:,.0f}".format(market.total_volume or 0) }}</div>
-                            </div>
-                            <div class="col-4">
-                                <div class="text-muted-arc" style="font-size:0.78rem;">Liquidity</div>
-                                <div style="font-weight:700;">${{ "{:,.0f}".format(market.total_liquidity or 0) }}</div>
-                            </div>
-                            <div class="col-4">
-                                <div class="text-muted-arc" style="font-size:0.78rem;">Trades</div>
-                                <div style="font-weight:700;">{{ market.trade_count or 0 }}</div>
-                            </div>
+                        <div class="chart-container">
+                            <canvas id="priceChart"></canvas>
                         </div>
+                    </div>
+                </div>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-4"><div class="stat-mini text-center">
+                        <div class="stat-label">Volume</div>
+                        <div class="stat-value">${{ "{:,.0f}".format(market.total_volume or 0) }}</div>
+                    </div></div>
+                    <div class="col-4"><div class="stat-mini text-center">
+                        <div class="stat-label">Liquidity</div>
+                        <div class="stat-value">${{ "{:,.0f}".format(market.total_liquidity or 0) }}</div>
+                    </div></div>
+                    <div class="col-4"><div class="stat-mini text-center">
+                        <div class="stat-label">Trades</div>
+                        <div class="stat-value">{{ market.trade_count or 0 }}</div>
+                    </div></div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center py-2">
+                        <h6 class="mb-0"><i class="bi bi-activity text-warning"></i> Recent trades</h6>
+                        <span class="text-muted-arc" style="font-size:0.72rem;">Live</span>
+                    </div>
+                    <div class="card-body p-2" id="trades-list" style="max-height:280px;overflow-y:auto;">
+                        <div class="text-center text-muted-arc py-3" style="font-size:0.85rem;">Loading...</div>
                     </div>
                 </div>
             </div>
 
-            <!-- Trade panel -->
-            <div class="col-md-5">
-                <div class="card">
-                    <div class="card-header"><h6 class="mb-0"><i class="bi bi-cart-plus"></i> Place an order</h6></div>
+            <!-- RIGHT: trade panel -->
+            <div class="col-lg-5">
+                <div class="card sticky-top" style="top:20px;">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0"><i class="bi bi-cart-plus"></i> Place an order</h6>
+                        <span class="badge bg-secondary" style="font-size:0.65rem;">USDC native</span>
+                    </div>
                     <div class="card-body">
                         <div class="d-flex gap-2 mb-3">
                             <button class="outcome-btn active yes" id="btn-yes" type="button" data-outcome="YES">YES</button>
@@ -124,9 +164,10 @@
                         <input type="number" id="amount" class="form-control form-control-arc mb-2"
                                value="10" min="1" max="500" step="1" />
                         <div class="d-flex gap-1 mb-3">
-                            <button class="btn btn-sm btn-outline-secondary flex-grow-1" data-amt="5">$5</button>
-                            <button class="btn btn-sm btn-outline-secondary flex-grow-1" data-amt="10">$10</button>
-                            <button class="btn btn-sm btn-outline-secondary flex-grow-1" data-amt="25">$25</button>
+                            <button class="preset-btn flex-grow-1" data-amt="5">$5</button>
+                            <button class="preset-btn flex-grow-1" data-amt="10">$10</button>
+                            <button class="preset-btn flex-grow-1" data-amt="25">$25</button>
+                            <button class="preset-btn flex-grow-1" data-amt="50">$50</button>
                         </div>
 
                         <label class="text-muted-arc" style="font-size:0.85rem;">User ID</label>
@@ -136,6 +177,7 @@
                         <div class="quote-box mb-3" id="quote-box">
                             <div class="quote-row"><span class="label">Side</span><span id="q-side">YES</span></div>
                             <div class="quote-row"><span class="label">Current price</span><span id="q-price">${{ "%.4f"|format(market.yes_price) }}</span></div>
+                            <div class="quote-row"><span class="label">Est. shares</span><span id="q-shares">--</span></div>
                             <div class="quote-row"><span class="label">Slippage est.</span><span id="q-slip">--</span></div>
                             <div class="quote-row"><span class="label">Network fee</span><span style="color:#3fb950;">~$0.01 (Arc)</span></div>
                         </div>
@@ -144,7 +186,7 @@
                             <i class="bi bi-lightning-charge-fill"></i> Buy YES on Arc
                         </button>
                         <div class="text-muted-arc text-center mt-2" style="font-size:0.72rem;">
-                            Settles via Arc · USDC native · &lt; 1s finality
+                            <i class="bi bi-shield-check"></i> Settles via Arc · &lt; 1s finality
                         </div>
                     </div>
                 </div>
@@ -157,6 +199,7 @@
     <script>
     const MARKET_ID = {{ market.market_id|tojson }};
     let side = 'YES';
+    let priceChart = null;
 
     function $(id) { return document.getElementById(id); }
     function setSide(s) {
@@ -176,26 +219,40 @@
     });
     $('amount').addEventListener('input', refreshQuote);
 
+    function flashTile(id) {
+        const el = $(id);
+        if (!el) return;
+        el.classList.add('flash');
+        setTimeout(() => el.classList.remove('flash'), 400);
+    }
+
     async function refreshQuote() {
         const amt = parseFloat($('amount').value || 0);
         if (!amt || amt <= 0) return;
         try {
             const r = await fetch(`/api/trade/amm/quote?market_id=${MARKET_ID}&outcome=${side}&amount_usdc=${amt}`);
             const d = await r.json();
-            $('q-price').textContent = '$' + Number(d.current_price).toFixed(4);
+            const curPrice = Number(d.current_price);
+            $('q-price').textContent = '$' + curPrice.toFixed(4);
             const slip = d.slippage;
             let pct = 0;
+            let priceAfter = curPrice;
             if (slip && typeof slip === 'object') {
                 pct = (slip.slippage_pct ?? slip.slippage ?? 0);
+                if (pct > 1) pct = pct / 100;
+                priceAfter = slip.price_after ?? curPrice;
             }
+            const avgPrice = (curPrice + priceAfter) / 2;
+            const estShares = avgPrice > 0 ? (amt / avgPrice) : 0;
+            $('q-shares').textContent = estShares.toFixed(2) + ' ' + side;
+
             const slipDisplay = $('q-slip');
             slipDisplay.textContent = (pct * 100).toFixed(2) + '%';
-            // Color-code + disable button if slippage too high
             const btn = $('btn-buy');
             if (pct > 0.30) {
                 slipDisplay.style.color = '#f85149';
                 btn.disabled = true;
-                btn.innerHTML = `<i class="bi bi-exclamation-triangle"></i> Slippage too high (${(pct*100).toFixed(0)}%) — try smaller amount`;
+                btn.innerHTML = `<i class="bi bi-exclamation-triangle"></i> Slippage too high (${(pct*100).toFixed(0)}%) — try smaller`;
             } else if (pct > 0.10) {
                 slipDisplay.style.color = '#d29922';
                 btn.disabled = false;
@@ -214,18 +271,24 @@
         el.style.background = ok ? '#1a3a26' : '#3a1a1a';
         el.style.border = `1px solid ${ok ? '#3fb950' : '#f85149'}`;
         el.style.color = '#e6edf3';
-        el.style.minWidth = '300px';
+        el.style.minWidth = '320px';
         el.innerHTML = `<div class="toast-body">${msg}</div>`;
         $('toasts').appendChild(el);
         setTimeout(() => el.remove(), 5000);
     }
 
+    let lastYes = null;
     async function refreshPrice() {
         try {
             const r = await fetch(`/api/trade/amm/quote?market_id=${MARKET_ID}&outcome=YES&amount_usdc=1`);
             const d = await r.json();
             const yes = Number(d.current_price);
             const no  = 1 - yes;
+            if (lastYes !== null && Math.abs(yes - lastYes) > 0.0001) {
+                flashTile('tile-yes');
+                flashTile('tile-no');
+            }
+            lastYes = yes;
             $('yes-price').textContent = '$' + yes.toFixed(2);
             $('no-price').textContent  = '$' + no.toFixed(2);
             $('bar-yes').style.width = (yes * 100).toFixed(2) + '%';
@@ -235,6 +298,102 @@
         } catch (e) {}
     }
 
+    async function refreshChart() {
+        try {
+            const r = await fetch(`/api/markets/${MARKET_ID}/price_history?hours=24`);
+            const d = await r.json();
+            const points = d.points || [];
+            // Append current price as the latest point
+            const curR = await fetch(`/api/trade/amm/quote?market_id=${MARKET_ID}&outcome=YES&amount_usdc=1`);
+            const curD = await curR.json();
+            const labels = points.map(p => {
+                const t = new Date(p.timestamp);
+                return t.getHours().toString().padStart(2,'0') + ':' + t.getMinutes().toString().padStart(2,'0');
+            });
+            const data = points.map(p => Number(p.price_yes));
+            // Add live point
+            labels.push('now');
+            data.push(Number(curD.current_price));
+
+            if (!priceChart) {
+                const ctx = $('priceChart').getContext('2d');
+                priceChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'YES',
+                            data: data,
+                            borderColor: '#3fb950',
+                            backgroundColor: 'rgba(63,185,80,0.12)',
+                            fill: true,
+                            tension: 0.25,
+                            pointRadius: 0,
+                            pointHoverRadius: 4,
+                            borderWidth: 2,
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: ctx => '$' + Number(ctx.parsed.y).toFixed(4)
+                                }
+                            }
+                        },
+                        scales: {
+                            x: { ticks: { color: '#8b949e', maxTicksLimit: 6, font:{size:10} }, grid: { color: 'rgba(255,255,255,0.04)' } },
+                            y: {
+                                min: 0, max: 1,
+                                ticks: { color: '#8b949e', callback: v => '$' + v.toFixed(2), font:{size:10} },
+                                grid: { color: 'rgba(255,255,255,0.04)' }
+                            }
+                        }
+                    }
+                });
+            } else {
+                priceChart.data.labels = labels;
+                priceChart.data.datasets[0].data = data;
+                priceChart.update('none');
+            }
+        } catch (e) { /* silent */ }
+    }
+
+    function fmtTimeAgo(iso) {
+        const ms = Date.now() - new Date(iso).getTime();
+        const s = Math.floor(ms/1000);
+        if (s < 60) return s + 's ago';
+        if (s < 3600) return Math.floor(s/60) + 'm ago';
+        return Math.floor(s/3600) + 'h ago';
+    }
+
+    async function refreshTrades() {
+        try {
+            const r = await fetch(`/api/markets/${MARKET_ID}/recent_trades?limit=15`);
+            const d = await r.json();
+            const trades = d.trades || [];
+            const list = $('trades-list');
+            if (!trades.length) {
+                list.innerHTML = '<div class="text-center text-muted-arc py-3" style="font-size:0.85rem;">No trades yet</div>';
+                return;
+            }
+            list.innerHTML = trades.map(t => {
+                const isYes = (t.outcome === 'YES');
+                const isPythia = t.user_id === 'pythia_agent';
+                const userTag = isPythia ? '<span class="agent-tag">Pythia AI</span>' : '';
+                return `<div class="trade-row">
+                    <span><span class="${isYes?'trade-yes':'trade-no'}"><i class="bi bi-${t.side==='BUY'?'arrow-up':'arrow-down'}-circle"></i> ${t.side} ${t.outcome}</span>${userTag}</span>
+                    <span class="text-muted-arc">${Number(t.input_amount).toFixed(0)} USDC</span>
+                    <span>@$${Number(t.avg_price).toFixed(4)}</span>
+                    <span class="text-muted-arc" style="font-size:0.72rem;">${fmtTimeAgo(t.timestamp)}</span>
+                </div>`;
+            }).join('');
+        } catch (e) { /* silent */ }
+    }
+
     $('btn-buy').addEventListener('click', async () => {
         const amt = parseFloat($('amount').value || 0);
         const userId = $('user-id').value.trim() || 'demo_user';
@@ -242,7 +401,7 @@
         const btn = $('btn-buy');
         btn.disabled = true;
         const orig = btn.innerHTML;
-        btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Submitting...';
+        btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Submitting on Arc...';
         try {
             const r = await fetch('/api/trade/amm/buy', {
                 method: 'POST',
@@ -257,11 +416,9 @@
             });
             const d = await r.json();
             if (r.ok && d.shares_received) {
-                toast(`Bought ${d.shares_received.toFixed(2)} ${side} shares @ $${Number(d.avg_price).toFixed(4)} avg`);
-                refreshPrice();
-                refreshQuote();
-                // Second refresh after 800ms to show settled state
-                setTimeout(() => { refreshPrice(); refreshQuote(); }, 800);
+                toast(`<i class="bi bi-check-circle-fill text-success"></i> Bought ${d.shares_received.toFixed(2)} ${side} @ $${Number(d.avg_price).toFixed(4)}`);
+                refreshPrice(); refreshQuote(); refreshChart(); refreshTrades();
+                setTimeout(() => { refreshPrice(); refreshChart(); refreshTrades(); }, 800);
             } else {
                 toast(d.error || 'Trade failed', false);
             }
@@ -272,8 +429,13 @@
         btn.innerHTML = orig;
     });
 
-    setInterval(refreshPrice, 15000);
+    // Initial loads + intervals
+    refreshChart();
+    refreshTrades();
     refreshQuote();
+    setInterval(refreshPrice, 8000);
+    setInterval(refreshChart, 30000);
+    setInterval(refreshTrades, 12000);
     </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>

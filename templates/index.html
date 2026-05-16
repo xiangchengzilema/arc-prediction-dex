@@ -3,64 +3,101 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Arc Prediction DEX - Dashboard</title>
+    <title>Pythia · AI Trading Agent on Arc</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
-        :root { --arc-blue: #1a73e8; --arc-dark: #0d1117; --arc-card: #161b22; --arc-border: #30363d; }
+        :root { --arc-blue: #1a73e8; --arc-dark: #0d1117; --arc-card: #161b22; --arc-border: #30363d; --arc-green:#3fb950; --arc-red:#f85149; --arc-amber:#d29922; }
         body { background: var(--arc-dark); color: #e6edf3; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
         .card { background: var(--arc-card); border: 1px solid var(--arc-border); border-radius: 12px; }
-        .card-header { border-bottom: 1px solid var(--arc-border); color: #e6edf3; }
-        .stat-card { text-align: center; padding: 20px; }
-        .stat-value { font-size: 2rem; font-weight: 700; color: var(--arc-blue); }
-        .stat-label { font-size: 0.85rem; color: #8b949e; margin-top: 4px; }
-        .market-row { border-bottom: 1px solid var(--arc-border); padding: 16px 0; }
-        .market-row:hover { background: rgba(26, 115, 232, 0.05); }
-        .outcome-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
-        .outcome-yes { background: rgba(46, 160, 67, 0.15); color: #3fb950; }
-        .outcome-no { background: rgba(248, 81, 73, 0.15); color: #f85149; }
-        .price-bar { height: 8px; border-radius: 4px; background: #21262d; overflow: hidden; }
-        .price-fill-yes { background: linear-gradient(90deg, #3fb950, #2ea043); height: 100%; border-radius: 4px; transition: width 0.5s; }
-        .price-fill-no { background: linear-gradient(90deg, #f85149, #da3633); height: 100%; border-radius: 4px; transition: width 0.5s; }
-        .volume-pill { background: rgba(26, 115, 232, 0.1); color: var(--arc-blue); padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; }
-        .nav-brand { font-weight: 700; font-size: 1.3rem; color: var(--arc-blue) !important; }
+        .card-header { border-bottom: 1px solid var(--arc-border); color: #e6edf3; background: rgba(255,255,255,0.01); }
+        .nav-brand { font-weight: 700; font-size: 1.3rem; color: var(--arc-blue) !important; letter-spacing:-0.5px; }
         .bg-arc { background: var(--arc-card); }
         .text-muted-arc { color: #8b949e; }
-        .table-dark-custom { color: #e6edf3; }
-        .table-dark-custom th { border-color: var(--arc-border); color: #8b949e; font-weight: 600; font-size: 0.8rem; text-transform: uppercase; }
-        .table-dark-custom td { border-color: var(--arc-border); vertical-align: middle; }
-        .category-badge { font-size: 0.7rem; padding: 2px 8px; border-radius: 10px; background: rgba(139, 148, 158, 0.1); color: #8b949e; }
-        .btn-arc { background: var(--arc-blue); color: white; border: none; }
-        .btn-arc:hover { background: #1557b0; color: white; }
-        .status-open { color: #3fb950; }
-        .status-closed { color: #f85149; }
-        .status-resolved { color: #d29922; }
-        .market-question { font-weight: 600; font-size: 1rem; color: #e6edf3 !important; text-decoration: none; display: inline-block; }
+        a { color: var(--arc-blue); text-decoration: none; }
+        a:hover { color: #4a90e2; }
+
+        /* Hero */
+        .hero {
+            background: radial-gradient(circle at 20% 0%, rgba(26,115,232,0.15), transparent 60%),
+                        radial-gradient(circle at 80% 100%, rgba(63,185,80,0.08), transparent 60%);
+            border: 1px solid var(--arc-border);
+            border-radius: 16px;
+            padding: 32px;
+            margin-bottom: 24px;
+        }
+        .hero-pill { display:inline-block; background: rgba(26,115,232,0.12); color: var(--arc-blue); border:1px solid rgba(26,115,232,0.3); padding:4px 12px; border-radius:14px; font-size:0.72rem; font-weight:600; letter-spacing:0.05em; text-transform:uppercase; }
+        .hero h1 { font-size: 2rem; font-weight: 700; line-height: 1.2; margin: 12px 0 10px; }
+        .hero-tagline { color: #c9d1d9; font-size: 1rem; max-width: 760px; line-height: 1.55; }
+        .hero-stats { display:flex; gap:24px; flex-wrap:wrap; margin-top: 20px; padding-top:20px; border-top:1px solid var(--arc-border); }
+        .hero-stat { min-width: 130px; }
+        .hero-stat-label { color:#8b949e; font-size:0.7rem; text-transform:uppercase; letter-spacing:0.6px; margin-bottom:4px; }
+        .hero-stat-value { font-size:1.6rem; font-weight:700; }
+
+        /* Pythia P&L card */
+        .pnl-card {
+            background: linear-gradient(135deg, rgba(26,115,232,0.1), rgba(63,185,80,0.06));
+            border: 1px solid rgba(26,115,232,0.3);
+        }
+        .pnl-tile { background: rgba(0,0,0,0.2); border-radius:8px; padding:14px; height:100%; }
+        .pnl-label { color:#8b949e; font-size:0.7rem; text-transform:uppercase; letter-spacing:0.6px; margin-bottom:4px; }
+        .pnl-value { font-size:1.4rem; font-weight:700; }
+        .pnl-positive { color: var(--arc-green); }
+        .pnl-negative { color: var(--arc-red); }
+        .pnl-neutral  { color: #e6edf3; }
+
+        /* Stat cards */
+        .stat-card { text-align:center; padding:18px 12px; }
+        .stat-value { font-size:1.5rem; font-weight:700; color:var(--arc-blue); }
+        .stat-label { font-size:0.72rem; color:#8b949e; margin-top:3px; text-transform:uppercase; letter-spacing:0.5px; }
+
+        /* Markets table */
+        .table-dark-custom { color: #e6edf3; margin-bottom:0; }
+        .table-dark-custom th { border-color: var(--arc-border); color: #8b949e; font-weight: 600; font-size: 0.72rem; text-transform: uppercase; letter-spacing:0.5px; padding: 10px 12px; }
+        .table-dark-custom td { border-color: var(--arc-border); vertical-align: middle; padding: 14px 12px; }
+        .table-dark-custom tbody tr { transition: background 0.15s; }
+        .table-dark-custom tbody tr:hover { background: rgba(26,115,232,0.05); }
+        .market-question { font-weight: 600; font-size: 0.95rem; color: #e6edf3 !important; text-decoration: none; display: block; line-height:1.35; }
         .market-question:hover { color: var(--arc-blue) !important; }
-        .btn-trade { background: var(--arc-blue); color: white; border: none; padding: 6px 16px; border-radius: 6px; font-size: 0.82rem; font-weight: 600; text-decoration: none; display: inline-block; transition: all 0.15s; }
-        .btn-trade:hover { background: #1557b0; color: white; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(26, 115, 232, 0.3); }
+        .market-id { color:#6e7681; font-size:0.7rem; font-family: ui-monospace, monospace; margin-top:3px; }
+        .price-bar { height: 6px; border-radius: 3px; background: #21262d; overflow: hidden; width: 90px; }
+        .price-fill-yes { background: linear-gradient(90deg, #3fb950, #2ea043); height: 100%; transition: width 0.5s; }
+        .yes-price-text { font-weight:700; color: var(--arc-green); font-size:0.95rem; }
+        .volume-pill { background: rgba(26,115,232,0.1); color: var(--arc-blue); padding: 3px 10px; border-radius: 12px; font-size: 0.78rem; font-weight:600; }
+        .category-badge { font-size: 0.7rem; padding: 3px 9px; border-radius: 10px; background: rgba(139,148,158,0.1); color: #8b949e; }
+        .status-open { color: var(--arc-green); }
+        .status-closed { color: var(--arc-red); }
+        .status-resolved { color: var(--arc-amber); }
+        .btn-trade { background: var(--arc-blue); color: white; border: none; padding: 7px 16px; border-radius: 6px; font-size: 0.82rem; font-weight: 600; text-decoration: none; display: inline-block; transition: all 0.15s; white-space:nowrap; }
+        .btn-trade:hover { background: #1557b0; color: white; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(26,115,232,0.3); }
+
+        /* Sparkline */
+        .spark-cell { width: 90px; height: 30px; }
+
+        /* Pythia agent card */
+        .agent-card { background: linear-gradient(135deg, rgba(26,115,232,0.08), rgba(46,160,67,0.04)); border: 1px solid rgba(26,115,232,0.25); }
+        .agent-status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--arc-green); box-shadow: 0 0 8px rgba(63,185,80,0.6); animation: pulse 1.6s infinite; margin-right: 6px; vertical-align: middle; }
+        @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+        .decision-row { border-left: 2px solid var(--arc-border); padding: 10px 14px; margin-bottom: 8px; background: rgba(13,17,23,0.5); border-radius: 0 6px 6px 0; font-size: 0.85rem; transition: all 0.2s; }
+        .decision-row.buy { border-left-color: var(--arc-green); }
+        .decision-row.hold { border-left-color: var(--arc-amber); }
+        .decision-row.skip { border-left-color: #8b949e; }
+        .decision-row.new-row { animation: slidein 0.4s; }
+        @keyframes slidein { from { opacity:0; transform: translateX(-10px); } to { opacity:1; transform: translateX(0); } }
+        .decision-time { color: #6e7681; font-size: 0.72rem; font-family: ui-monospace, monospace; }
+        .decision-action { font-weight: 700; font-size: 0.74rem; padding: 2px 8px; border-radius: 4px; letter-spacing:0.5px; }
+        .action-buy { background: rgba(63,185,80,0.15); color: var(--arc-green); }
+        .action-hold { background: rgba(210,153,34,0.15); color: var(--arc-amber); }
+        .action-skip { background: rgba(139,148,158,0.15); color: #8b949e; }
+        .decision-rationale { color: #c9d1d9; margin-top: 4px; font-size:0.83rem; }
+        .decision-meta { color: #6e7681; font-size: 0.72rem; margin-top: 3px; font-family: ui-monospace, monospace; }
         .api-link { color: #8b949e; font-size: 0.8rem; text-decoration: none; }
         .api-link:hover { color: var(--arc-blue); }
-        .hero-tagline { color: #8b949e; font-size: 0.95rem; max-width: 720px; line-height: 1.55; }
-        .hero-pill { display: inline-block; background: rgba(26, 115, 232, 0.12); color: var(--arc-blue); border: 1px solid rgba(26, 115, 232, 0.3); padding: 4px 10px; border-radius: 14px; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
-        .agent-card { background: linear-gradient(135deg, rgba(26, 115, 232, 0.08), rgba(46, 160, 67, 0.04)); border: 1px solid rgba(26, 115, 232, 0.25); }
-        .agent-status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #3fb950; box-shadow: 0 0 8px rgba(63, 185, 80, 0.6); animation: pulse 1.6s infinite; margin-right: 6px; vertical-align: middle; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-        .decision-row { border-left: 2px solid var(--arc-border); padding: 10px 14px; margin-bottom: 8px; background: rgba(13, 17, 23, 0.5); border-radius: 0 6px 6px 0; font-size: 0.85rem; }
-        .decision-row.buy { border-left-color: #3fb950; }
-        .decision-row.hold { border-left-color: #d29922; }
-        .decision-row.skip { border-left-color: #8b949e; }
-        .decision-time { color: #6e7681; font-size: 0.72rem; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
-        .decision-action { font-weight: 700; font-size: 0.78rem; padding: 1px 7px; border-radius: 4px; }
-        .action-buy { background: rgba(63, 185, 80, 0.15); color: #3fb950; }
-        .action-hold { background: rgba(210, 153, 34, 0.15); color: #d29922; }
-        .action-skip { background: rgba(139, 148, 158, 0.15); color: #8b949e; }
-        .decision-rationale { color: #c9d1d9; margin-top: 4px; }
-        .decision-meta { color: #6e7681; font-size: 0.75rem; margin-top: 2px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+        code { color: #79c0ff; background: rgba(110,118,129,0.1); padding: 1px 6px; border-radius: 4px; font-size: 0.8rem; }
     </style>
 </head>
 <body>
-    <!-- Navigation -->
     <nav class="navbar navbar-dark bg-arc border-bottom border-dark">
         <div class="container">
             <a class="navbar-brand nav-brand" href="/">
@@ -69,66 +106,89 @@
             <div class="d-flex align-items-center gap-3">
                 <a href="/api/agent/status" class="api-link"><i class="bi bi-robot"></i> Agent</a>
                 <a href="/api/health" class="api-link"><i class="bi bi-code-slash"></i> API</a>
+                <a href="https://github.com/xiangchengzilema/arc-prediction-dex" class="api-link" target="_blank"><i class="bi bi-github"></i> GitHub</a>
                 <span class="badge bg-success"><span class="agent-status-dot"></span>Live</span>
             </div>
         </div>
     </nav>
 
-    <div class="container mt-4">
+    <div class="container mt-4" style="max-width: 1200px;">
         <!-- Hero -->
-        <div class="mb-4">
-            <span class="hero-pill">AI Agent · Autonomous trading</span>
-            <h2 class="mt-2 mb-2" style="color:#e6edf3;font-weight:700;">Pythia trades prediction markets on Arc</h2>
-            <p class="hero-tagline mb-0">
-                Pythia is an autonomous agent that scans live AMM prices, compares them to its
-                internal probability model, and opens positions on under-priced outcomes using
-                Kelly-fractional sizing. Every decision below is on-chain ready and settles
-                through Arc's USDC-native rails.
+        <div class="hero">
+            <span class="hero-pill"><i class="bi bi-robot"></i> AI agent · autonomous trading</span>
+            <h1>Pythia trades prediction markets on Arc</h1>
+            <p class="hero-tagline">
+                An autonomous AI agent that scans live AMM prices, compares them against an internal
+                probability model, and opens positions on under-priced outcomes using Kelly-fractional
+                sizing. Every trade settles through Arc's USDC-native rails — sub-second finality, ~$0.01 fees.
             </p>
-        </div>
-
-        <!-- Stats Cards -->
-        <div class="row g-3 mb-4">
-            <div class="col-md-3">
-                <div class="card stat-card">
-                    <div class="stat-value">{{ stats.total_markets }}</div>
-                    <div class="stat-label">Total Markets</div>
+            <div class="hero-stats">
+                <div class="hero-stat">
+                    <div class="hero-stat-label">Markets</div>
+                    <div class="hero-stat-value">{{ stats.open_markets }}<span class="text-muted-arc" style="font-size:1rem;font-weight:400;"> / {{ stats.total_markets }}</span></div>
                 </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card stat-card">
-                    <div class="stat-value">{{ stats.open_markets }}</div>
-                    <div class="stat-label">Open Markets</div>
+                <div class="hero-stat">
+                    <div class="hero-stat-label">Volume (USDC)</div>
+                    <div class="hero-stat-value" id="hero-volume">${{ "{:,.0f}".format(stats.total_volume or 0) }}</div>
                 </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card stat-card">
-                    <div class="stat-value">${{ "{:,.0f}".format(stats.total_volume or 0) }}</div>
-                    <div class="stat-label">Total Volume</div>
+                <div class="hero-stat">
+                    <div class="hero-stat-label">Liquidity (TVL)</div>
+                    <div class="hero-stat-value" id="hero-tvl">${{ "{:,.0f}".format(stats.total_tvl or 0) }}</div>
                 </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card stat-card">
-                    <div class="stat-value">${{ "{:,.0f}".format(stats.total_tvl or 0) }}</div>
-                    <div class="stat-label">Total TVL</div>
+                <div class="hero-stat">
+                    <div class="hero-stat-label">Agent cycle</div>
+                    <div class="hero-stat-value" style="color:var(--arc-blue);">{{ agent.cycle_seconds if agent else '--' }}s</div>
                 </div>
             </div>
         </div>
 
-        <!-- Pythia Agent Activity -->
+        <!-- Pythia P&L card -->
+        <div class="card pnl-card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0"><i class="bi bi-graph-up-arrow"></i> Pythia · Trading performance</h6>
+                <span class="text-muted-arc" style="font-size:0.78rem;"><span class="agent-status-dot"></span>auto-refresh</span>
+            </div>
+            <div class="card-body">
+                <div class="row g-2">
+                    <div class="col-md-3 col-6">
+                        <div class="pnl-tile">
+                            <div class="pnl-label">Total P&L</div>
+                            <div class="pnl-value pnl-neutral" id="pnl-total">--</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="pnl-tile">
+                            <div class="pnl-label">Realized</div>
+                            <div class="pnl-value pnl-neutral" id="pnl-realized">--</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="pnl-tile">
+                            <div class="pnl-label">Unrealized</div>
+                            <div class="pnl-value pnl-neutral" id="pnl-unrealized">--</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="pnl-tile">
+                            <div class="pnl-label">Open positions</div>
+                            <div class="pnl-value pnl-neutral" id="pnl-positions">--</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pythia Live Decisions -->
         <div class="card agent-card mb-4">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">
-                    <i class="bi bi-robot"></i> Pythia Agent · Live Decisions
-                </h5>
-                <div class="d-flex align-items-center gap-3 text-muted-arc" style="font-size:0.8rem;">
-                    <span><span class="agent-status-dot"></span>{{ agent.status if agent else 'idle' }}</span>
-                    <span>cycle: {{ agent.cycle_seconds if agent else '--' }}s</span>
-                    <span>buys: <span style="color:#3fb950;">{{ agent.recent_buys if agent else 0 }}</span></span>
-                    <span>holds: <span style="color:#d29922;">{{ agent.recent_holds if agent else 0 }}</span></span>
+                <h6 class="mb-0"><i class="bi bi-robot"></i> Pythia · Live decision log</h6>
+                <div class="d-flex align-items-center gap-3 text-muted-arc" style="font-size:0.78rem;">
+                    <span><span class="agent-status-dot"></span><span id="agent-status">{{ agent.status if agent else 'idle' }}</span></span>
+                    <span>buys: <span style="color:var(--arc-green);" id="agent-buys">{{ agent.recent_buys if agent else 0 }}</span></span>
+                    <span>holds: <span style="color:var(--arc-amber);" id="agent-holds">{{ agent.recent_holds if agent else 0 }}</span></span>
                 </div>
             </div>
-            <div class="card-body" style="max-height: 240px; overflow-y: auto;" id="agent-log">
+            <div class="card-body" style="max-height: 300px; overflow-y: auto;" id="agent-log">
                 {% if agent and agent.decisions %}
                     {% for d in agent.decisions %}
                     <div class="decision-row {{ d.action|lower }}">
@@ -142,12 +202,7 @@
                             <span class="decision-time">{{ d.timestamp[11:19] if d.timestamp else '--' }}</span>
                         </div>
                         <div class="decision-rationale">{{ d.rationale }}</div>
-                        <div class="decision-meta">
-                            price={{ "%.3f"|format(d.current_price) }}
-                            · target={{ "%.3f"|format(d.target_prob) }}
-                            · edge={{ "%+.3f"|format(d.edge) }}
-                            {% if d.pnl_estimate is not none %} · expected_pnl={{ "%+.2f"|format(d.pnl_estimate) }}{% endif %}
-                        </div>
+                        <div class="decision-meta">price={{ "%.3f"|format(d.current_price) }} · target={{ "%.3f"|format(d.target_prob) }} · edge={{ "%+.3f"|format(d.edge) }}{% if d.pnl_estimate is not none %} · expected_pnl={{ "%+.2f"|format(d.pnl_estimate) }}{% endif %}</div>
                     </div>
                     {% endfor %}
                 {% else %}
@@ -158,24 +213,21 @@
             </div>
         </div>
 
-        <!-- Markets Section -->
+        <!-- Markets -->
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="bi bi-bar-chart-line"></i> Active Markets</h5>
-                <div class="d-flex gap-2">
-                    <span class="category-badge">All</span>
-                    <span class="category-badge">Crypto</span>
-                    <span class="category-badge">Sports</span>
-                    <span class="category-badge">Politics</span>
-                </div>
+                <h6 class="mb-0"><i class="bi bi-bar-chart-line"></i> Active markets</h6>
+                <span class="text-muted-arc" style="font-size:0.78rem;">Click a row to trade</span>
             </div>
             <div class="card-body p-0">
                 {% if markets %}
-                <table class="table table-dark-custom mb-0">
+                <div class="table-responsive">
+                <table class="table table-dark-custom">
                     <thead>
                         <tr>
-                            <th>Market</th>
-                            <th>YES Price</th>
+                            <th style="min-width:240px;">Market</th>
+                            <th>YES</th>
+                            <th>24h chart</th>
                             <th>Volume</th>
                             <th>Status</th>
                             <th>Category</th>
@@ -184,25 +236,25 @@
                     </thead>
                     <tbody>
                         {% for mkt in markets %}
-                        <tr>
+                        <tr data-market-id="{{ mkt.market_id }}">
                             <td>
-                                <a href="/market/{{ mkt.market_id }}" class="market-question">{{ mkt.question }}</a><br>
-                                <small class="text-muted-arc">ID: {{ mkt.market_id }}</small>
+                                <a href="/market/{{ mkt.market_id }}" class="market-question">{{ mkt.question }}</a>
+                                <div class="market-id">{{ mkt.market_id[:18] }}</div>
                             </td>
                             <td>
-                                <div class="d-flex align-items-center gap-2">
-                                    <span class="outcome-badge outcome-yes">YES</span>
-                                    <span>${{ "%.2f"|format(mkt.yes_price or 0.5) }}</span>
+                                <div class="yes-price-text" data-yes-price>${{ "%.2f"|format(mkt.yes_price or 0.5) }}</div>
+                                <div class="price-bar mt-1">
+                                    <div class="price-fill-yes" data-yes-bar style="width: {{ ((mkt.yes_price or 0.5) * 100)|round|int }}%;"></div>
                                 </div>
-                                <div class="price-bar mt-1" style="width: 100px;">
-                                    <div class="price-fill-yes" style="width: {{ ((mkt.yes_price or 0.5) * 100)|round|int }}%;"></div>
-                                </div>
+                            </td>
+                            <td>
+                                <canvas class="spark-cell" data-spark="{{ mkt.market_id }}"></canvas>
                             </td>
                             <td>
                                 <span class="volume-pill">${{ "%.0f"|format(mkt.total_volume or 0) }}</span>
                             </td>
                             <td>
-                                <span class="status-{{ mkt.status|lower }}">{{ mkt.status }}</span>
+                                <span class="status-{{ mkt.status|lower }}" style="font-size:0.85rem;font-weight:600;">{{ mkt.status }}</span>
                             </td>
                             <td>
                                 <span class="category-badge">{{ mkt.category }}</span>
@@ -216,113 +268,218 @@
                         {% endfor %}
                     </tbody>
                 </table>
+                </div>
                 {% else %}
                 <div class="text-center py-5">
                     <i class="bi bi-inbox" style="font-size: 3rem; color: #30363d;"></i>
-                    <p class="text-muted-arc mt-2">No active markets yet. Create one via the API!</p>
-                    <code class="text-muted-arc">POST /api/markets</code>
+                    <p class="text-muted-arc mt-2">No active markets yet. Create one via the API.</p>
+                    <code>POST /api/markets</code>
                 </div>
                 {% endif %}
             </div>
         </div>
 
-        <!-- API Reference -->
-        <div class="card mt-4 mb-4">
-            <div class="card-header">
-                <h5 class="mb-0"><i class="bi bi-code-slash"></i> API Quick Reference</h5>
+        <!-- System Stats Cards -->
+        <div class="row g-3 mt-3 mb-4">
+            <div class="col-md-3 col-6">
+                <div class="card stat-card">
+                    <div class="stat-value">{{ stats.total_markets }}</div>
+                    <div class="stat-label">Total Markets</div>
+                </div>
             </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-4">
-                        <h6 class="text-muted-arc">Markets</h6>
-                        <ul class="list-unstyled small">
-                            <li><code>GET /api/markets</code> - List markets</li>
-                            <li><code>POST /api/markets</code> - Create market</li>
-                            <li><code>GET /api/markets/:id</code> - Market details</li>
-                            <li><code>GET /api/markets/search?q=</code> - Search</li>
-                            <li><code>GET /api/markets/trending</code> - Trending</li>
-                        </ul>
-                    </div>
-                    <div class="col-md-4">
-                        <h6 class="text-muted-arc">Trading</h6>
-                        <ul class="list-unstyled small">
-                            <li><code>POST /api/trade/amm/buy</code> - AMM buy</li>
-                            <li><code>POST /api/trade/amm/sell</code> - AMM sell</li>
-                            <li><code>POST /api/trade/orderbook/limit</code> - Limit order</li>
-                            <li><code>POST /api/trade/orderbook/market</code> - Market order</li>
-                            <li><code>GET /api/orderbook/:id</code> - Order book</li>
-                        </ul>
-                    </div>
-                    <div class="col-md-4">
-                        <h6 class="text-muted-arc">Portfolio & More</h6>
-                        <ul class="list-unstyled small">
-                            <li><code>GET /api/portfolio/:user</code> - Portfolio</li>
-                            <li><code>GET /api/portfolio/:user/pnl</code> - P&L</li>
-                            <li><code>POST /api/liquidity/add</code> - Add LP</li>
-                            <li><code>POST /api/oracle/propose</code> - Resolve</li>
-                            <li><code>GET /api/analytics/trending</code> - Analytics</li>
-                        </ul>
-                    </div>
+            <div class="col-md-3 col-6">
+                <div class="card stat-card">
+                    <div class="stat-value">{{ stats.open_markets }}</div>
+                    <div class="stat-label">Open</div>
+                </div>
+            </div>
+            <div class="col-md-3 col-6">
+                <div class="card stat-card">
+                    <div class="stat-value">${{ "{:,.0f}".format(stats.total_volume or 0) }}</div>
+                    <div class="stat-label">Volume</div>
+                </div>
+            </div>
+            <div class="col-md-3 col-6">
+                <div class="card stat-card">
+                    <div class="stat-value">${{ "{:,.0f}".format(stats.total_tvl or 0) }}</div>
+                    <div class="stat-label">TVL</div>
                 </div>
             </div>
         </div>
     </div>
 
     <footer class="text-center text-muted-arc py-4 mt-4 border-top" style="border-color: var(--arc-border) !important;">
-        <small>Arc Prediction DEX &middot; Built on <a href="https://docs.arc.network" class="text-info">Arc Network</a>
-        &middot; ~$0.01 fees &middot; Sub-second finality &middot; USDC native</small>
+        <small>Pythia · Built on <a href="https://docs.arc.network" class="text-info">Arc Network</a>
+        &middot; ~$0.01 fees &middot; Sub-second finality &middot; USDC native
+        &middot; <a href="https://github.com/xiangchengzilema/arc-prediction-dex" class="text-info">source</a></small>
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-    // Auto-refresh Pythia agent activity every 20s without full page reload.
-    (function() {
-        const log = document.getElementById('agent-log');
-        if (!log) return;
-
-        function actionClass(a) { return 'action-' + (a || '').toLowerCase(); }
-        function rowClass(a)    { return 'decision-row ' + (a || '').toLowerCase(); }
-        function fmt(n, d=3)    { return (n === null || n === undefined) ? '--' : Number(n).toFixed(d); }
-        function fmtSign(n, d=3){ if (n === null || n === undefined) return '--'; const s = n >= 0 ? '+' : ''; return s + Number(n).toFixed(d); }
-
-        function render(decisions) {
-            if (!decisions || !decisions.length) {
-                log.innerHTML = '<div class="text-muted-arc text-center py-4"><i class="bi bi-hourglass-split"></i> Pythia is warming up.</div>';
+    // ─── Sparklines for each market row ───
+    const sparkCharts = {};
+    async function loadSparkline(marketId, canvas) {
+        try {
+            const r = await fetch(`/api/markets/${marketId}/price_history?hours=24`);
+            const d = await r.json();
+            const points = d.points || [];
+            const data = points.map(p => Number(p.price_yes));
+            if (data.length < 2) {
+                // Just show flat line at current price
+                const cur = Number(canvas.closest('tr').querySelector('[data-yes-price]').textContent.replace('$',''));
+                data.push(cur, cur);
+            }
+            const minV = Math.min(...data, 0.4);
+            const maxV = Math.max(...data, 0.6);
+            const trending = data[data.length-1] >= data[0];
+            const color = trending ? '#3fb950' : '#f85149';
+            const fill  = trending ? 'rgba(63,185,80,0.18)' : 'rgba(248,81,73,0.18)';
+            if (sparkCharts[marketId]) {
+                sparkCharts[marketId].data.datasets[0].data = data;
+                sparkCharts[marketId].data.datasets[0].borderColor = color;
+                sparkCharts[marketId].data.datasets[0].backgroundColor = fill;
+                sparkCharts[marketId].options.scales.y.min = Math.max(0, minV - 0.05);
+                sparkCharts[marketId].options.scales.y.max = Math.min(1, maxV + 0.05);
+                sparkCharts[marketId].update('none');
                 return;
             }
-            log.innerHTML = decisions.map(d => {
-                const time = (d.timestamp || '').slice(11, 19) || '--';
-                const meta = `price=${fmt(d.current_price)} · target=${fmt(d.target_prob)} · edge=${fmtSign(d.edge)}` +
-                             (d.pnl_estimate !== null && d.pnl_estimate !== undefined ? ` · expected_pnl=${fmtSign(d.pnl_estimate, 2)}` : '');
-                const sub = (d.outcome ? `<span class="text-muted-arc" style="font-size:0.78rem;margin-left:6px;">${d.outcome}` +
-                             (d.amount_usdc ? ` · $${Number(d.amount_usdc).toFixed(2)}` : '') + '</span>' : '');
-                return `<div class="${rowClass(d.action)}">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <span class="decision-action ${actionClass(d.action)}">${d.action}</span>
-                            ${sub}
-                            <span class="text-muted-arc" style="font-size:0.78rem;margin-left:6px;">on</span>
-                            <span style="color:#e6edf3;font-size:0.85rem;">${(d.market_question || '').replace(/[<>]/g, '')}</span>
-                        </div>
-                        <span class="decision-time">${time}</span>
-                    </div>
-                    <div class="decision-rationale">${(d.rationale || '').replace(/[<>]/g, '')}</div>
-                    <div class="decision-meta">${meta}</div>
-                </div>`;
-            }).join('');
-        }
+            sparkCharts[marketId] = new Chart(canvas.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: data.map((_, i) => i),
+                    datasets: [{
+                        data: data, borderColor: color, backgroundColor: fill,
+                        fill: true, tension: 0.3, pointRadius: 0, borderWidth: 1.5,
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                    scales: {
+                        x: { display: false },
+                        y: { display: false, min: Math.max(0, minV-0.05), max: Math.min(1, maxV+0.05) }
+                    },
+                    elements: { line: { borderJoinStyle: 'round' } },
+                    animation: false,
+                }
+            });
+        } catch (e) { /* silent */ }
+    }
+    document.querySelectorAll('canvas[data-spark]').forEach(c => {
+        loadSparkline(c.dataset.spark, c);
+    });
 
-        async function tick() {
+    // ─── Live row prices ───
+    async function refreshRowPrices() {
+        const rows = document.querySelectorAll('tr[data-market-id]');
+        for (const row of rows) {
+            const mid = row.dataset.marketId;
             try {
-                const r = await fetch('/api/agent/status?limit=15', { cache: 'no-store' });
-                if (!r.ok) return;
-                const data = await r.json();
-                render(data.decisions || []);
-            } catch (e) { /* silent */ }
+                const r = await fetch(`/api/trade/amm/quote?market_id=${mid}&outcome=YES&amount_usdc=1`);
+                const d = await r.json();
+                const yes = Number(d.current_price);
+                const txt = row.querySelector('[data-yes-price]');
+                const bar = row.querySelector('[data-yes-bar]');
+                if (txt) txt.textContent = '$' + yes.toFixed(2);
+                if (bar) bar.style.width = (yes * 100).toFixed(1) + '%';
+            } catch (e) {}
         }
+    }
 
-        setInterval(tick, 20000);
-    })();
+    // ─── Pythia P&L ───
+    function fmtMoney(v) {
+        if (v === null || v === undefined) return '--';
+        const n = Number(v);
+        const sign = n >= 0 ? '+' : '';
+        return sign + '$' + n.toFixed(2);
+    }
+    function applyPnlClass(el, v) {
+        el.classList.remove('pnl-positive', 'pnl-negative', 'pnl-neutral');
+        if (v > 0.01) el.classList.add('pnl-positive');
+        else if (v < -0.01) el.classList.add('pnl-negative');
+        else el.classList.add('pnl-neutral');
+    }
+    async function refreshPnL() {
+        try {
+            const r = await fetch('/api/agent/pnl');
+            const d = await r.json();
+            const total = d.total_pnl ?? 0;
+            const real  = d.total_realized_pnl ?? 0;
+            const unreal = d.total_unrealized_pnl ?? 0;
+            const open  = d.open_positions ?? 0;
+            const tEl = document.getElementById('pnl-total');
+            const rEl = document.getElementById('pnl-realized');
+            const uEl = document.getElementById('pnl-unrealized');
+            const pEl = document.getElementById('pnl-positions');
+            if (tEl) { tEl.textContent = fmtMoney(total); applyPnlClass(tEl, total); }
+            if (rEl) { rEl.textContent = fmtMoney(real); applyPnlClass(rEl, real); }
+            if (uEl) { uEl.textContent = fmtMoney(unreal); applyPnlClass(uEl, unreal); }
+            if (pEl) { pEl.textContent = open; }
+        } catch (e) {}
+    }
+
+    // ─── Pythia decision log ───
+    function actionClass(a) { return 'action-' + (a||'').toLowerCase(); }
+    function rowClass(a)    { return 'decision-row ' + (a||'').toLowerCase(); }
+    function fmt(n, d=3)    { return (n===null||n===undefined) ? '--' : Number(n).toFixed(d); }
+    function fmtSign(n, d=3){ if (n===null||n===undefined) return '--'; const s=n>=0?'+':''; return s+Number(n).toFixed(d); }
+    function escapeHtml(s)  { return (s||'').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])); }
+
+    let lastFirstTimestamp = null;
+    function renderDecisions(decisions) {
+        const log = document.getElementById('agent-log');
+        if (!log) return;
+        if (!decisions || !decisions.length) {
+            log.innerHTML = '<div class="text-muted-arc text-center py-4"><i class="bi bi-hourglass-split"></i> Pythia is warming up.</div>';
+            return;
+        }
+        const newFirst = decisions[0].timestamp;
+        const isNew = newFirst !== lastFirstTimestamp;
+        lastFirstTimestamp = newFirst;
+        log.innerHTML = decisions.map((d, i) => {
+            const time = (d.timestamp||'').slice(11,19) || '--';
+            const meta = `price=${fmt(d.current_price)} · target=${fmt(d.target_prob)} · edge=${fmtSign(d.edge)}` +
+                         (d.pnl_estimate!==null && d.pnl_estimate!==undefined ? ` · expected_pnl=${fmtSign(d.pnl_estimate, 2)}` : '');
+            const sub = (d.outcome ? `<span class="text-muted-arc" style="font-size:0.78rem;margin-left:6px;">${d.outcome}` +
+                         (d.amount_usdc ? ` · $${Number(d.amount_usdc).toFixed(2)}` : '') + '</span>' : '');
+            const cls = (i === 0 && isNew) ? rowClass(d.action) + ' new-row' : rowClass(d.action);
+            return `<div class="${cls}">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <span class="decision-action ${actionClass(d.action)}">${d.action}</span>
+                        ${sub}
+                        <span class="text-muted-arc" style="font-size:0.78rem;margin-left:6px;">on</span>
+                        <span style="color:#e6edf3;font-size:0.85rem;">${escapeHtml(d.market_question)}</span>
+                    </div>
+                    <span class="decision-time">${time}</span>
+                </div>
+                <div class="decision-rationale">${escapeHtml(d.rationale)}</div>
+                <div class="decision-meta">${meta}</div>
+            </div>`;
+        }).join('');
+    }
+    async function refreshAgent() {
+        try {
+            const r = await fetch('/api/agent/status?limit=15', { cache: 'no-store' });
+            const d = await r.json();
+            renderDecisions(d.decisions || []);
+            const sEl = document.getElementById('agent-status');
+            const bEl = document.getElementById('agent-buys');
+            const hEl = document.getElementById('agent-holds');
+            if (sEl) sEl.textContent = d.status || 'idle';
+            if (bEl) bEl.textContent = d.recent_buys ?? 0;
+            if (hEl) hEl.textContent = d.recent_holds ?? 0;
+        } catch (e) {}
+    }
+
+    // Kick off + intervals
+    refreshPnL();
+    setInterval(refreshAgent, 12000);
+    setInterval(refreshPnL, 15000);
+    setInterval(refreshRowPrices, 10000);
+    setInterval(() => {
+        document.querySelectorAll('canvas[data-spark]').forEach(c => loadSparkline(c.dataset.spark, c));
+    }, 60000);
     </script>
 </body>
 </html>

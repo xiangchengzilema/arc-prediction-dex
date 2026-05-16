@@ -61,6 +61,8 @@ pythia = PythiaAgent(
     market_engine=market_engine,
     get_amm_pool=lambda mid: get_amm(mid),
     db_path=DB_PATH,
+    portfolio=portfolio,
+    analytics=analytics,
 )
 pythia.start()
 
@@ -314,6 +316,36 @@ def amm_sell():
         return jsonify(result), 200
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
+
+
+@app.route("/api/markets/<market_id>/price_history", methods=["GET"])
+def price_history(market_id):
+    """Get price history for charting."""
+    hours = int(request.args.get("hours", 24))
+    try:
+        pool = get_amm(market_id)
+        history = pool.get_price_history(hours=hours)
+        # Reverse so oldest first (chart left-to-right)
+        history.reverse()
+        return jsonify({
+            "market_id": market_id,
+            "hours": hours,
+            "points": history,
+        })
+    except Exception as e:
+        return jsonify({"error": str(e), "points": []}), 200
+
+
+@app.route("/api/markets/<market_id>/recent_trades", methods=["GET"])
+def recent_trades(market_id):
+    """Get recent trades for a market."""
+    limit = int(request.args.get("limit", 20))
+    try:
+        pool = get_amm(market_id)
+        trades = pool.get_recent_trades(limit=limit)
+        return jsonify({"market_id": market_id, "trades": trades})
+    except Exception as e:
+        return jsonify({"error": str(e), "trades": []}), 200
 
 
 @app.route("/api/trade/amm/quote", methods=["GET"])
@@ -588,6 +620,37 @@ def agent_status():
     """Get Pythia agent status and recent decisions."""
     limit = int(request.args.get("limit", 30))
     return jsonify(pythia.snapshot(limit=limit))
+
+
+@app.route("/api/agent/pnl", methods=["GET"])
+def agent_pnl():
+    """Get Pythia's live P&L using current AMM prices."""
+    try:
+        positions = portfolio.get_positions("pythia_agent", status="OPEN")
+        current_prices = {}
+        for pos in positions:
+            mid = pos["market_id"]
+            try:
+                pool = get_amm(mid)
+                yes_price = pool.get_price("YES")
+                current_prices[f"{mid}_YES"] = yes_price
+                current_prices[f"{mid}_NO"] = 1.0 - yes_price
+            except Exception:
+                pass
+        pnl = portfolio.calculate_pnl("pythia_agent", current_prices=current_prices)
+        # Win rate from closed positions
+        closed = [p for p in pnl.get("positions", []) if p["status"] == "CLOSED"]
+        wins = sum(1 for p in closed if p["realized_pnl"] > 0)
+        pnl["win_rate"] = round(wins / len(closed), 4) if closed else 0.0
+        pnl["closed_count"] = len(closed)
+        return jsonify(pnl)
+    except Exception as e:
+        return jsonify({
+            "user_id": "pythia_agent", "total_pnl": 0,
+            "total_realized_pnl": 0, "total_unrealized_pnl": 0,
+            "open_positions": 0, "closed_positions": 0,
+            "win_rate": 0, "error": str(e),
+        })
 
 
 if __name__ == "__main__":
