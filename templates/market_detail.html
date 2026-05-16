@@ -76,7 +76,9 @@
             </a>
             <div class="d-flex align-items-center gap-3">
                 <a href="/" class="text-muted-arc" style="font-size:0.85rem;"><i class="bi bi-arrow-left"></i> Markets</a>
+                <a href="/portfolio" class="text-muted-arc" style="font-size:0.85rem;"><i class="bi bi-wallet2"></i> Portfolio</a>
                 <a href="/leaderboard" class="text-muted-arc" style="font-size:0.85rem;"><i class="bi bi-trophy"></i> Leaderboard</a>
+                <a href="/agent" class="text-muted-arc" style="font-size:0.85rem;"><i class="bi bi-robot"></i> Agent</a>
                 <a href="/resolve" class="text-muted-arc" style="font-size:0.85rem;"><i class="bi bi-shield-check"></i> Resolve</a>
                 <span class="badge bg-success"><span class="live-dot"></span> Live on Arc</span>
             </div>
@@ -188,7 +190,8 @@
                         <span class="badge bg-secondary" style="font-size:0.65rem;">USDC native</span>
                     </div>
                     <div class="d-flex border-bottom border-dark px-2">
-                        <button class="tab-btn active" id="tab-amm" type="button" data-tab="amm">AMM</button>
+                        <button class="tab-btn active" id="tab-amm" type="button" data-tab="amm">Buy</button>
+                        <button class="tab-btn" id="tab-sell" type="button" data-tab="sell">Sell</button>
                         <button class="tab-btn" id="tab-limit" type="button" data-tab="limit">Limit</button>
                     </div>
                     <div class="card-body" id="pane-amm">
@@ -224,6 +227,23 @@
                         </button>
                         <div class="text-muted-arc text-center mt-2" style="font-size:0.72rem;">
                             <i class="bi bi-shield-check"></i> Settles via Arc · &lt; 1s finality
+                        </div>
+                    </div>
+                    <div class="card-body" id="pane-sell" style="display:none;">
+                        <div id="sell-positions-wrap">
+                            <div class="text-center text-muted-arc py-3" style="font-size:0.85rem;">
+                                <i class="bi bi-hourglass"></i> Loading your positions...
+                            </div>
+                        </div>
+                        <div class="mt-2 text-muted-arc text-center" style="font-size:0.72rem;">
+                            <i class="bi bi-info-circle"></i> Sells return shares to the AMM pool at the current price.
+                        </div>
+                        <div class="mt-3 pt-3 border-top border-dark">
+                            <label class="text-muted-arc" style="font-size:0.78rem;">User to view positions for</label>
+                            <input id="sell-user-id" class="form-control form-control-arc" value="demo_user" />
+                            <button class="btn btn-sm btn-outline-info w-100 mt-2" id="btn-load-positions" type="button">
+                                <i class="bi bi-arrow-clockwise"></i> Load positions
+                            </button>
                         </div>
                     </div>
                     <div class="card-body" id="pane-limit" style="display:none;">
@@ -519,9 +539,87 @@
             const t = b.dataset.tab;
             document.querySelectorAll('[data-tab]').forEach(x => x.classList.toggle('active', x.dataset.tab === t));
             $('pane-amm').style.display = (t === 'amm') ? 'block' : 'none';
+            $('pane-sell').style.display = (t === 'sell') ? 'block' : 'none';
             $('pane-limit').style.display = (t === 'limit') ? 'block' : 'none';
+            if (t === 'sell') loadSellPositions();
         });
     });
+
+    // ─── Sell / close positions ───
+    async function loadSellPositions() {
+        const user = ($('sell-user-id').value.trim()) || 'demo_user';
+        const wrap = $('sell-positions-wrap');
+        wrap.innerHTML = '<div class="text-center text-muted-arc py-3" style="font-size:0.85rem;"><i class="bi bi-hourglass"></i> Loading...</div>';
+        try {
+            const r = await fetch(`/api/portfolio/${encodeURIComponent(user)}/positions?status=OPEN`);
+            const all = await r.json();
+            // Filter to this market only
+            const positions = (Array.isArray(all) ? all : []).filter(p => p.market_id === MARKET_ID);
+            if (!positions.length) {
+                wrap.innerHTML = `<div class="text-center text-muted-arc py-3" style="font-size:0.85rem;">
+                    <i class="bi bi-inbox"></i> No open positions in this market for <strong>${user}</strong>.
+                </div>`;
+                return;
+            }
+            wrap.innerHTML = positions.map(p => {
+                const upnl = Number(p.unrealized_pnl || 0);
+                const pnlCls = upnl > 0 ? 'pnl-positive' : (upnl < 0 ? 'pnl-negative' : 'pnl-neutral');
+                const sign = upnl >= 0 ? '+' : '';
+                const sideCls = p.outcome === 'YES' ? 'trade-yes' : 'trade-no';
+                return `<div class="quote-box mb-2">
+                    <div class="quote-row"><span class="label">Side</span>
+                        <span class="${sideCls}" style="font-weight:700;">${p.outcome} · ${Number(p.shares).toFixed(2)} shares</span>
+                    </div>
+                    <div class="quote-row"><span class="label">Avg entry</span><span>$${Number(p.avg_entry_price).toFixed(4)}</span></div>
+                    <div class="quote-row"><span class="label">Current</span><span>$${Number(p.current_price || 0).toFixed(4)}</span></div>
+                    <div class="quote-row"><span class="label">Unrealized P&L</span>
+                        <span class="${pnlCls}">${sign}$${upnl.toFixed(2)}</span>
+                    </div>
+                    <button class="btn btn-buy w-100 mt-2" style="background:linear-gradient(135deg,#f85149,#da3633);"
+                            data-close-pos="${p.position_id}" data-close-shares="${p.shares}">
+                        <i class="bi bi-x-circle"></i> Close ${Number(p.shares).toFixed(2)} ${p.outcome}
+                    </button>
+                </div>`;
+            }).join('');
+            // Wire up close buttons
+            wrap.querySelectorAll('[data-close-pos]').forEach(b => {
+                b.addEventListener('click', () => closePosition(b.dataset.closePos, parseFloat(b.dataset.closeShares), b));
+            });
+        } catch (e) {
+            wrap.innerHTML = '<div class="text-center text-muted-arc py-3" style="font-size:0.85rem;">Failed to load.</div>';
+        }
+    }
+    $('btn-load-positions').addEventListener('click', loadSellPositions);
+    $('sell-user-id').addEventListener('keydown', e => { if (e.key === 'Enter') loadSellPositions(); });
+
+    async function closePosition(posId, shares, btn) {
+        const orig = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Closing on Arc...';
+        try {
+            const r = await fetch('/api/portfolio/close', {
+                method: 'POST',
+                headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({position_id: posId, shares: shares}),
+            });
+            const d = await r.json();
+            if (r.ok) {
+                const pnl = Number(d.realized_pnl || 0);
+                const sign = pnl >= 0 ? '+' : '';
+                toast(`<i class="bi bi-check-circle-fill text-success"></i> Closed · P&L ${sign}$${pnl.toFixed(2)} · received $${Number(d.usdc_received).toFixed(2)}`);
+                refreshPrice(); refreshTrades(); refreshOrderBook();
+                setTimeout(loadSellPositions, 600);
+            } else {
+                toast(d.error || 'Close failed', false);
+                btn.disabled = false;
+                btn.innerHTML = orig;
+            }
+        } catch (e) {
+            toast('Network error', false);
+            btn.disabled = false;
+            btn.innerHTML = orig;
+        }
+    }
 
     // ─── Order book ───
     async function refreshOrderBook() {

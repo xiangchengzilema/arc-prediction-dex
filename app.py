@@ -208,6 +208,95 @@ def resolve_page():
                            agent=pythia.snapshot(limit=5))
 
 
+@app.route("/portfolio")
+@app.route("/portfolio/<user_id>")
+def portfolio_page(user_id=None):
+    """User portfolio page — open positions, P&L, trade history."""
+    user_id = user_id or request.args.get("user", "demo_user")
+    try:
+        positions = portfolio.get_positions(user_id, status="OPEN")
+        for p in positions:
+            try:
+                pool = get_amm(p["market_id"])
+                cur = pool.get_price(p["outcome"])
+                p["current_price"] = cur
+                p["unrealized_pnl"] = round((cur - p["avg_entry_price"]) * p["shares"], 4)
+                p["market_value"] = round(cur * p["shares"], 4)
+            except Exception:
+                p["current_price"] = 0.5
+                p["unrealized_pnl"] = 0
+                p["market_value"] = 0
+            try:
+                mkt = market_engine.get_market(p["market_id"])
+                p["market_question"] = mkt.get("question", "") if mkt else ""
+            except Exception:
+                p["market_question"] = ""
+    except Exception:
+        positions = []
+    try:
+        pnl = portfolio.calculate_pnl(user_id)
+    except Exception:
+        pnl = {"total_pnl": 0, "realized": 0, "unrealized": 0,
+               "total_trades": 0, "total_volume": 0}
+    try:
+        trades = portfolio.get_trade_history(user_id, limit=20)
+    except Exception:
+        trades = []
+    return render_template("portfolio.html", user_id=user_id,
+                           positions=positions, pnl=pnl, trades=trades)
+
+
+@app.route("/agent")
+def agent_page():
+    """Pythia AI agent control room — full decision log + live P&L."""
+    snap = pythia.snapshot(limit=50)
+    # Build per-market view: target prob, live price, edge, position
+    markets_data = market_engine.list_markets(status="OPEN", limit=50)
+    market_views = []
+    for m in markets_data.get("markets", []):
+        mid = m["market_id"]
+        try:
+            target = pythia._target_probability(mid)
+            pool = get_amm(mid)
+            cur = pool.get_price("YES")
+        except Exception:
+            target = 0.5
+            cur = 0.5
+        try:
+            positions = portfolio.get_positions("pythia_agent", status="OPEN")
+            pos = next((p for p in positions if p["market_id"] == mid), None)
+        except Exception:
+            pos = None
+        market_views.append({
+            "market_id": mid,
+            "question": m.get("question", "")[:80],
+            "target": round(target, 3),
+            "current": round(cur, 3),
+            "edge": round(target - cur, 3),
+            "position": pos,
+        })
+    # Live P&L
+    try:
+        positions = portfolio.get_positions("pythia_agent", status="OPEN")
+        prices = {}
+        for p in positions:
+            try:
+                pp = get_amm(p["market_id"]).get_price("YES")
+                prices[f"{p['market_id']}_YES"] = pp
+                prices[f"{p['market_id']}_NO"] = 1.0 - pp
+            except Exception:
+                pass
+        pnl = portfolio.calculate_pnl("pythia_agent", current_prices=prices)
+        closed = [p for p in pnl.get("positions", []) if p["status"] == "CLOSED"]
+        wins = sum(1 for p in closed if p["realized_pnl"] > 0)
+        pnl["win_rate"] = round(wins / len(closed), 4) if closed else 0.0
+        pnl["closed_count"] = len(closed)
+    except Exception:
+        pnl = {"total_pnl": 0, "total_realized_pnl": 0, "total_unrealized_pnl": 0,
+               "open_positions": 0, "win_rate": 0, "closed_count": 0}
+    return render_template("agent.html", agent=snap, markets=market_views, pnl=pnl)
+
+
 # ─── Health & Stats ───────────────────────────────────────────
 
 @app.route("/api/health")
@@ -553,7 +642,73 @@ def get_portfolio(user_id):
 def get_positions(user_id):
     """Get user positions."""
     status = request.args.get("status", "OPEN")
-    return jsonify(portfolio.get_positions(user_id, status=status))
+    positions = portfolio.get_positions(user_id, status=status)
+    # Enrich with live AMM price + unrealized P&L
+    for p in positions:
+        try:
+            pool = get_amm(p["market_id"])
+            cur = pool.get_price(p["outcome"])
+            p["current_price"] = cur
+            p["unrealized_pnl"] = round((cur - p["avg_entry_price"]) * p["shares"], 4)
+            p["market_value"] = round(cur * p["shares"], 4)
+        except Exception:
+            p["current_price"] = None
+            p["unrealized_pnl"] = 0
+            p["market_value"] = 0
+        # Attach market question for display
+        try:
+            mkt = market_engine.get_market(p["market_id"])
+            p["market_question"] = mkt.get("question", "")
+        except Exception:
+            p["market_question"] = ""
+    return jsonify(positions)
+
+
+@app.route("/api/portfolio/close", methods=["POST"])
+def close_position_endpoint():
+    """Close (sell) a position via AMM and update portfolio."""
+    data = request.json or {}
+    position_id = data.get("position_id")
+    shares = float(data.get("shares", 0))
+    if not position_id or shares <= 0:
+        return jsonify({"error": "position_id and positive shares required"}), 400
+    pos = portfolio.get_position(position_id)
+    if not pos:
+        return jsonify({"error": "position not found"}), 404
+    if pos["status"] != "OPEN":
+        return jsonify({"error": f"position is {pos['status']}"}), 400
+    if shares > pos["shares"]:
+        shares = pos["shares"]  # cap to held shares
+    try:
+        pool = get_amm(pos["market_id"])
+        sell_res = pool.sell_outcome(pos["outcome"], shares,
+                                     user_id=pos["user_id"])
+        exit_price = sell_res.get("avg_price", pool.get_price(pos["outcome"]))
+        fee = sell_res.get("fee_charged", 0)
+        close_res = portfolio.close_position(position_id, shares, exit_price,
+                                             fee=fee)
+        usdc_received = sell_res.get("usdc_received", 0)
+        try:
+            market_engine.update_volume(pos["market_id"], usdc_received,
+                                        pos["user_id"])
+        except Exception:
+            pass
+        try:
+            analytics.record_volume(pos["market_id"], usdc_received, "SELL",
+                                    pos["user_id"])
+        except Exception:
+            pass
+        return jsonify({
+            "position_id": position_id,
+            "shares_closed": shares,
+            "exit_price": exit_price,
+            "usdc_received": usdc_received,
+            "realized_pnl": close_res.get("realized_pnl"),
+            "remaining_shares": close_res.get("remaining_shares", 0),
+            "status": "CLOSED" if close_res.get("remaining_shares", 0) <= 0.001 else "OPEN",
+        }), 200
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
 
 
 @app.route("/api/portfolio/<user_id>/trades", methods=["GET"])
