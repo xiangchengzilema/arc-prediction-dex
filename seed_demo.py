@@ -49,34 +49,52 @@ DEMO_TRADES = [
 def seed_if_empty(db_path: str = None):
     db_path = db_path or os.environ.get("PREDICT_DEX_DB", "prediction_dex.db")
     engine = MarketEngine(db_path=db_path)
-    existing = engine.list_markets(limit=1)
-    if existing.get("total", 0) > 0:
-        return False  # already seeded
+    existing = engine.list_markets(limit=100)
+    market_ids = [m["market_id"] for m in existing.get("markets", [])]
 
-    liquidity_mgr = LiquidityPoolManager(db_path=db_path)
-    market_ids = []
-    for m in DEMO_MARKETS:
-        result = engine.create_market(
-            question=m["question"],
-            outcomes=["YES", "NO"],
-            deadline=m["deadline"],
-            creator_id="demo_seed",
-            category=m["category"],
+    if existing.get("total", 0) == 0:
+        liquidity_mgr = LiquidityPoolManager(db_path=db_path)
+        market_ids = []
+        for m in DEMO_MARKETS:
+            result = engine.create_market(
+                question=m["question"],
+                outcomes=["YES", "NO"],
+                deadline=m["deadline"],
+                creator_id="demo_seed",
+                category=m["category"],
+            )
+            mid = result["market_id"]
+            market_ids.append(mid)
+            pool = AMMPool(mid, db_path=db_path)
+            pool.initialize(m["initial_liquidity"], creator_id="demo_seed")
+            liquidity_mgr.create_pool(mid, m["initial_liquidity"], "demo_seed")
+            engine.open_market(mid, initial_liquidity=m["initial_liquidity"])
+
+    # Seed trades only if no volume yet (idempotent across redeploys)
+    needs_trades = all(
+        m.get("total_volume", 0) == 0 for m in existing.get("markets", [])
+    ) if existing.get("total", 0) > 0 else True
+
+    if needs_trades and len(market_ids) >= 4:
+        # Sort markets by created_at to get consistent ordering matching DEMO_MARKETS
+        sorted_markets = sorted(
+            existing.get("markets", []) if existing.get("total", 0) > 0 else [],
+            key=lambda m: m.get("created_at", "")
         )
-        mid = result["market_id"]
-        market_ids.append(mid)
-        pool = AMMPool(mid, db_path=db_path)
-        pool.initialize(m["initial_liquidity"], creator_id="demo_seed")
-        liquidity_mgr.create_pool(mid, m["initial_liquidity"], "demo_seed")
-        engine.open_market(mid, initial_liquidity=m["initial_liquidity"])
+        if sorted_markets:
+            ordered_ids = [m["market_id"] for m in sorted_markets]
+        else:
+            ordered_ids = market_ids
 
-    for t in DEMO_TRADES:
-        mid = market_ids[t["market_idx"]]
-        pool = AMMPool(mid, db_path=db_path)
-        try:
-            pool.buy_outcome(t["outcome"], t["amount"], user_id=t["user"], max_slippage=0.15)
-        except Exception as e:
-            print(f"Seed trade failed: {e}")
+        for t in DEMO_TRADES:
+            if t["market_idx"] >= len(ordered_ids):
+                continue
+            mid = ordered_ids[t["market_idx"]]
+            pool = AMMPool(mid, db_path=db_path)
+            try:
+                pool.buy_outcome(t["outcome"], t["amount"], user_id=t["user"], max_slippage=0.15)
+            except Exception as e:
+                print(f"Seed trade failed for {mid}: {e}")
     return True
 
 
