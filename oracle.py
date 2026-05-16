@@ -39,7 +39,10 @@ class ResolutionOracle:
     def _get_conn(self):
         """Get cached database connection."""
         if not hasattr(self, '_conn') or self._conn is None:
-            self._conn = sqlite3.connect(self.db_path)
+            self._conn = sqlite3.connect(self.db_path, check_same_thread=False, timeout=30)
+            self._conn.execute("PRAGMA journal_mode=WAL")
+            self._conn.execute("PRAGMA busy_timeout=10000")
+            self._conn.isolation_level = None  # autocommit
             self._conn.row_factory = None
         return self._conn
 

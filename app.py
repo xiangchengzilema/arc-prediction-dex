@@ -46,6 +46,14 @@ _amm_pools = {}
 _order_books = {}
 
 
+# Seed demo data on first import (idempotent — skips if data exists)
+try:
+    from seed_demo import seed_if_empty
+    seed_if_empty(db_path=DB_PATH)
+except Exception as _e:
+    print(f"Seed skipped: {_e}")
+
+
 def get_amm(market_id: str) -> AMMPool:
     """Get or create AMM pool for a market."""
     if market_id not in _amm_pools:
@@ -516,8 +524,8 @@ def analytics_system():
 
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PREDICT_DEX_PORT", 5003))
+    port = int(os.environ.get("PORT") or os.environ.get("PREDICT_DEX_PORT") or 5003)
     print(f"Starting Arc Prediction DEX API on port {port}...")
     print(f"Dashboard: http://localhost:{port}/")
     print(f"API docs:  http://localhost:{port}/api/health")
-    app.run(host="0.0.0.0", port=port, debug=True)
+    app.run(host="0.0.0.0", port=port, debug=False)
