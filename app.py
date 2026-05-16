@@ -74,12 +74,30 @@ def get_orderbook(market_id: str) -> OrderBook:
 def dashboard():
     """Web dashboard homepage."""
     markets_data = market_engine.list_markets(status="OPEN", limit=20)
+    markets = markets_data.get("markets", [])
+
+    # Enrich markets with real-time AMM prices
+    total_volume = 0
+    total_tvl = 0
+    for m in markets:
+        try:
+            pool = get_amm(m["market_id"])
+            yes_price = pool.get_price("YES")
+            m["yes_price"] = yes_price
+            m["no_price"] = 1.0 - yes_price
+        except Exception:
+            m["yes_price"] = 0.5
+            m["no_price"] = 0.5
+        total_volume += m.get("total_volume") or 0
+        total_tvl += m.get("total_liquidity") or 0
+
     stats = {
         "total_markets": markets_data.get("total", 0),
-        "open_markets": len(markets_data.get("markets", [])),
+        "open_markets": len(markets),
+        "total_volume": total_volume,
+        "total_tvl": total_tvl,
     }
-    return render_template("index.html", markets=markets_data.get("markets", []),
-                           stats=stats)
+    return render_template("index.html", markets=markets, stats=stats)
 
 
 # ─── Health & Stats ───────────────────────────────────────────

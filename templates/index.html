@@ -72,13 +72,13 @@
             </div>
             <div class="col-md-3">
                 <div class="card stat-card">
-                    <div class="stat-value">$--</div>
-                    <div class="stat-label">24h Volume</div>
+                    <div class="stat-value">${{ "{:,.0f}".format(stats.total_volume or 0) }}</div>
+                    <div class="stat-label">Total Volume</div>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="card stat-card">
-                    <div class="stat-value">$--</div>
+                    <div class="stat-value">${{ "{:,.0f}".format(stats.total_tvl or 0) }}</div>
                     <div class="stat-label">Total TVL</div>
                 </div>
             </div>
@@ -117,10 +117,10 @@
                             <td>
                                 <div class="d-flex align-items-center gap-2">
                                     <span class="outcome-badge outcome-yes">YES</span>
-                                    <span>$0.50</span>
+                                    <span>${{ "%.2f"|format(mkt.yes_price or 0.5) }}</span>
                                 </div>
                                 <div class="price-bar mt-1" style="width: 100px;">
-                                    <div class="price-fill-yes" style="width: 50%;"></div>
+                                    <div class="price-fill-yes" style="width: {{ ((mkt.yes_price or 0.5) * 100)|round|int }}%;"></div>
                                 </div>
                             </td>
                             <td>
