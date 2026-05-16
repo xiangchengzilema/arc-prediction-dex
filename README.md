@@ -1,275 +1,273 @@
-# Arc Prediction DEX
+<div align="center">
 
-A full-featured decentralized prediction market exchange built for the
-[Arc Network](https://docs.arc.network) — Circle's stablecoin-native L1 blockchain.
+# Pythia
 
-## Why Arc for Prediction Markets?
+**An autonomous AI agent that trades prediction markets on Arc.**
 
-| Feature | Ethereum | Arc |
-|---------|----------|-----|
-| Gas fee | $2-50 | ~$0.01 |
-| Finality | 12+ seconds | Sub-second |
+[![Live demo](https://img.shields.io/badge/demo-live-3fb950?style=flat-square)](https://arc-prediction-dex-production.up.railway.app)
+[![Python](https://img.shields.io/badge/python-3.11+-1a73e8?style=flat-square)](https://www.python.org)
+[![Tests](https://img.shields.io/badge/tests-80%20passing-3fb950?style=flat-square)](#testing)
+[![License](https://img.shields.io/badge/license-MIT-c9d1d9?style=flat-square)](#license)
+
+[Live demo](https://arc-prediction-dex-production.up.railway.app) · [Architecture](#architecture) · [How Pythia decides](#how-pythia-decides) · [API](#api-reference)
+
+</div>
+
+---
+
+## What this is
+
+Pythia is a self-running trading agent that watches binary YES/NO prediction markets, forms a probabilistic belief about each outcome, and places trades on its own — sized by the Kelly Criterion, settled in USDC, with every cent of P&L visible in real time.
+
+It runs on a complete prediction-market exchange we built from scratch:
+
+- **AMM trading engine** (constant-product, x·y=k)
+- **Central limit order book** with price-time priority matching
+- **UMA-style optimistic oracle** for resolution
+- **Liquidity pools** with LP token accounting
+- **Portfolio + analytics** with realized/unrealized P&L
+
+Built for the [Agora Agents Hackathon](https://agora.thecanteenapp.com/) on [Arc Network](https://docs.arc.network) — Circle's stablecoin-native L1.
+
+## Why Arc
+
+| | Ethereum | Arc |
+|---|---|---|
+| Gas fee | $2–50 | ~$0.01 |
+| Finality | 12+ s | sub-second |
 | Settlement | ETH (volatile) | USDC (stable) |
-| Micropayments | Impractical | Native |
-| Paymaster | Complex | Built-in |
+| Micropayments | impractical | native |
+| Paymaster | complex setup | built-in |
 
-Arc's low fees and USDC-native design make **micro-prediction markets viable**
-for the first time — markets with $0.01 positions, high-frequency trading,
-and instant settlement.
+Sub-cent fees make **per-market high-frequency rebalancing economically viable**. An agent can re-evaluate a $5 position every 30 seconds without gas eating the edge. That's the unlock.
+
+## How Pythia decides
+
+Every 30 seconds the agent walks through every open market and runs a five-step pipeline:
+
+```
+┌──────────────┐    ┌──────────────┐    ┌──────────────┐
+│ Pull current │ →  │ Form a       │ →  │ Compute edge │
+│ AMM price    │    │ target prob. │    │ = target - p │
+└──────────────┘    └──────────────┘    └──────────────┘
+                            │
+                            ▼
+                    ┌──────────────────┐
+                    │ Multi-signal     │
+                    │  · momentum      │
+                    │  · mean-revert   │
+                    │  · volume        │
+                    │  · time decay    │
+                    └──────────────────┘
+                            │
+                            ▼
+                    ┌──────────────────┐    ┌──────────────┐
+                    │ Kelly sizing     │ →  │ Submit AMM   │
+                    │ f* = ¼ · e/(1-p) │    │ buy/sell     │
+                    └──────────────────┘    └──────────────┘
+```
+
+- **Edge threshold:** ignore markets where `|target − price| < 5%` (noise floor).
+- **Quarter-Kelly sizing:** prevents blowups; cap per trade at $25.
+- **Cool-down:** no second trade in same market within 5 minutes.
+- **Position limit:** max 5 open positions across all markets.
+
+Every decision — BUY, HOLD, or SKIP — gets a one-line rationale and is streamed live to the [`/agent`](https://arc-prediction-dex-production.up.railway.app/agent) control room.
+
+## Pages
+
+| Route | What you see |
+|---|---|
+| [`/`](https://arc-prediction-dex-production.up.railway.app/) | Market grid with sparkline charts and live prices |
+| [`/market/<id>`](https://arc-prediction-dex-production.up.railway.app/) | Trade panel (buy/sell/limit), Level 2 order book, price chart, recent trades |
+| `/portfolio` | Open positions with live unrealized P&L · one-click close |
+| `/orders` | Resting limit orders across all markets · cancel button |
+| `/create` | Spin up a new binary market with AMM seed liquidity |
+| `/agent` | Pythia control room — beliefs vs market, edge, decision log |
+| `/leaderboard` | Trader ranking by total live P&L |
+| `/resolve` | Optimistic oracle proposals + dispute window |
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────┐
-│                   Web Dashboard                      │
-├─────────────────────────────────────────────────────┤
-│              REST API (30+ endpoints)                │
-├──────────┬──────────┬───────────┬───────────────────┤
-│   AMM    │ Order    │ Liquidity │    Oracle         │
-│  Engine  │  Book    │   Pools   │  Resolution       │
-│ (CPAMM)  │ (CLOB)   │  (LP)     │  (UMA-style)      │
-├──────────┴──────────┴───────────┴───────────────────┤
-│            Portfolio & Analytics Engine              │
-├─────────────────────────────────────────────────────┤
-│              SQLite Persistence Layer                │
-└─────────────────────────────────────────────────────┘
+                  ┌────────────────────────────┐
+                  │     Pythia AI Agent        │
+                  │  (autonomous loop, 30s)    │
+                  └─────────────┬──────────────┘
+                                │ buy / sell / hold
+                                ▼
+┌──────────────────────────────────────────────────────────┐
+│                   Web Dashboard (Flask)                   │
+├──────────────────────────────────────────────────────────┤
+│              REST API   ·   30+ endpoints                 │
+├──────────┬──────────┬──────────┬──────────┬───────────────┤
+│   AMM    │  CLOB    │ Liquidity│  Oracle  │   Portfolio   │
+│ (CPAMM)  │ matching │   pools  │  (UMA)   │   + P&L       │
+├──────────┴──────────┴──────────┴──────────┴───────────────┤
+│                  Analytics engine                         │
+├──────────────────────────────────────────────────────────┤
+│              SQLite (WAL, multi-thread)                   │
+└──────────────────────────────────────────────────────────┘
 ```
 
-## Core Components
+## Core modules
 
-### 1. AMM Engine (`amm.py`)
-Constant Product AMM (x×y=k) for instant trading:
-- Buy/sell outcome shares with price impact calculation
-- Configurable trading fees (default 1%)
-- Slippage protection with tolerance settings
-- LP token minting/burning
-- Price history for charting
+| File | What it does |
+|---|---|
+| [`pythia_agent.py`](pythia_agent.py) | Autonomous trading agent — belief formation, Kelly sizing, decision log |
+| [`amm.py`](amm.py) | Constant-product AMM with slippage protection and LP tokens |
+| [`orderbook.py`](orderbook.py) | CLOB with price-time priority, FOK/IOC, Level 2 depth |
+| [`market_engine.py`](market_engine.py) | Market lifecycle: create → open → trade → close → resolve → settle |
+| [`liquidity_pool.py`](liquidity_pool.py) | LP token mint/burn, fee distribution, IL calculator |
+| [`oracle.py`](oracle.py) | UMA-style optimistic resolution with bonded proposals + disputes |
+| [`portfolio.py`](portfolio.py) | Position tracking, realized/unrealized P&L, DCA, leaderboard |
+| [`analytics.py`](analytics.py) | Volume, manipulation detection, implied probabilities |
+| [`trading_sdk.py`](trading_sdk.py) | Zero-dependency Python SDK |
+| [`app.py`](app.py) | Flask app — 8 dashboard routes + 30+ JSON endpoints |
+| [`cli.py`](cli.py) | Command-line trading tool |
 
-### 2. Order Book (`orderbook.py`)
-Central Limit Order Book (CLOB) for advanced trading:
-- Price-time priority matching engine
-- Limit orders, market orders
-- Fill-or-Kill (FOK) and Immediate-or-Cancel (IOC)
-- Level 2 market data (depth, spread)
-- Maker (0.5%) and Taker (1.0%) fees
-
-### 3. Market Engine (`market_engine.py`)
-Full prediction market lifecycle:
-- Create → Open → Trade → Close → Resolve → Settle
-- Binary (YES/NO) and multi-outcome markets
-- Categories, tags, and search
-- Dispute period with evidence tracking
-
-### 4. Liquidity Pools (`liquidity_pool.py`)
-LP token management:
-- Proportional LP token minting/burning
-- Fee distribution (80% to LPs, 20% to protocol)
-- Impermanent loss calculator
-- Pool APR estimation
-
-### 5. Resolution Oracle (`oracle.py`)
-UMA-style optimistic oracle:
-- Bonded resolution proposals
-- Dispute mechanism with counter-evidence
-- Reputation-weighted voting
-- Multi-source data aggregation
-
-### 6. Portfolio Manager (`portfolio.py`)
-Position and P&L tracking:
-- Average entry price (DCA support)
-- Realized and unrealized P&L
-- Trade history with full audit trail
-- Leaderboard and ranking system
-
-### 7. Analytics (`analytics.py`)
-Market intelligence:
-- Volume tracking (hourly, 24h, 7d)
-- Price manipulation detection (wash trading, spoofing)
-- Implied probability calculations
-- Market depth analysis
-- Trending market detection
-
-## Quick Start
-
-### Install
+## Quick start
 
 ```bash
 git clone https://github.com/xiangchengzilema/arc-prediction-dex.git
 cd arc-prediction-dex
 pip install -r requirements.txt
-```
 
-### Run API Server
+# Seed a few demo markets + positions
+python seed_demo.py
 
-```bash
+# Run the dashboard + API + agent loop
 python app.py
-# Dashboard: http://localhost:5003/
-# API: http://localhost:5003/api/health
+# → open http://localhost:5003
 ```
 
-### Python SDK
+## Python SDK
 
 ```python
 from trading_sdk import PredictionDexSDK
 
 sdk = PredictionDexSDK("http://localhost:5003")
 
-# Create a market
 market = sdk.create_market(
     question="Will BTC reach $200k by end of 2026?",
     outcomes=["YES", "NO"],
     deadline="2026-12-31T23:59:59Z",
-    category="crypto"
+    category="crypto",
 )
 
-# Buy YES shares
 result = sdk.quick_trade(market["market_id"], "YES", 100)
-print(f"Bought {result['shares_received']} shares at {result['avg_price']}")
+print(f"Bought {result['shares_received']} shares at ${result['avg_price']:.4f}")
 
-# Check portfolio
 portfolio = sdk.get_portfolio("alice")
-print(f"Total value: ${portfolio['total_value']}")
+print(f"Live P&L: ${portfolio['total_pnl']:+.2f}")
 ```
 
-### CLI
+## CLI
 
 ```bash
-# List markets
 python cli.py markets list
-
-# Create market
 python cli.py markets create "Will ETH hit $10k?" --outcomes YES,NO
-
-# Buy shares
-python cli.py trade buy btc_200k YES --amount 100
-
-# Show portfolio
+python cli.py trade buy mkt_abc123 YES --amount 100
 python cli.py portfolio show --user alice
 ```
 
-## API Reference
+## API reference
 
 ### Markets
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/markets` | List markets |
-| POST | `/api/markets` | Create market |
-| GET | `/api/markets/:id` | Market details |
-| GET | `/api/markets/search?q=` | Search markets |
-| GET | `/api/markets/trending` | Trending markets |
-| POST | `/api/markets/:id/lifecycle` | Change state |
+| Method | Endpoint |
+|---|---|
+| `GET` | `/api/markets` — list (filter by `status`, `category`) |
+| `POST` | `/api/markets` — create + seed AMM + auto-open |
+| `GET` | `/api/markets/:id` — details |
+| `GET` | `/api/markets/search?q=` — full-text search |
+| `GET` | `/api/markets/trending` — by 24h volume |
 
-### AMM Trading
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/trade/amm/buy` | Buy from AMM |
-| POST | `/api/trade/amm/sell` | Sell to AMM |
-| GET | `/api/trade/amm/quote` | Price quote |
+### AMM
+| Method | Endpoint |
+|---|---|
+| `POST` | `/api/trade/amm/buy` |
+| `POST` | `/api/trade/amm/sell` |
+| `GET` | `/api/trade/amm/quote` |
 
-### Order Book
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/orderbook/:id` | Order book data |
-| POST | `/api/trade/orderbook/limit` | Limit order |
-| POST | `/api/trade/orderbook/market` | Market order |
-| POST | `/api/trade/orderbook/cancel` | Cancel order |
-
-### Liquidity
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/liquidity/add` | Add liquidity |
-| POST | `/api/liquidity/remove` | Remove liquidity |
-| GET | `/api/liquidity/pool/:id` | Pool info |
+### Order book
+| Method | Endpoint |
+|---|---|
+| `GET` | `/api/orderbook/:id` — Level 2 bids + asks |
+| `POST` | `/api/trade/orderbook/limit` |
+| `POST` | `/api/trade/orderbook/market` |
+| `POST` | `/api/trade/orderbook/cancel` |
+| `GET` | `/api/orders/:user` — all resting orders for a user |
 
 ### Portfolio
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/portfolio/:user` | Portfolio value |
-| GET | `/api/portfolio/:user/positions` | Open positions |
-| GET | `/api/portfolio/:user/pnl` | P&L breakdown |
-| GET | `/api/portfolio/leaderboard` | Leaderboard |
+| Method | Endpoint |
+|---|---|
+| `GET` | `/api/portfolio/:user` — value summary |
+| `GET` | `/api/portfolio/:user/positions` — with live unrealized P&L |
+| `GET` | `/api/portfolio/:user/pnl` — realized vs unrealized breakdown |
+| `POST` | `/api/portfolio/close` — close a position at current AMM price |
+| `GET` | `/api/portfolio/leaderboard` |
 
 ### Oracle
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/oracle/propose` | Propose resolution |
-| POST | `/api/oracle/dispute` | Dispute proposal |
-| POST | `/api/oracle/vote` | Vote on dispute |
-| POST | `/api/oracle/finalize/:id` | Finalize resolution |
+| Method | Endpoint |
+|---|---|
+| `POST` | `/api/oracle/propose` |
+| `POST` | `/api/oracle/dispute` |
+| `POST` | `/api/oracle/vote` |
+| `POST` | `/api/oracle/finalize/:id` |
 
-### Analytics
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/analytics/market/:id` | Market report |
-| GET | `/api/analytics/trending` | Trending markets |
-| GET | `/api/analytics/system` | System stats |
-
-## Docker
-
-```bash
-docker-compose up -d
-# API available at http://localhost:5003
-```
+### Pythia agent
+| Method | Endpoint |
+|---|---|
+| `GET` | `/api/pythia/snapshot` — recent decisions |
+| `GET` | `/api/pythia/pnl` — agent's live P&L |
 
 ## Testing
 
 ```bash
-# Run all tests
 pytest tests/ -v
-
-# Run specific test file
-pytest tests/test_amm.py -v
-pytest tests/test_orderbook.py -v
-
-# Run with coverage
-pip install pytest-cov
-pytest tests/ --cov=. --cov-report=html
+# 80 tests, all passing
 ```
 
-## Project Structure
+Coverage spans AMM math, order matching, market lifecycle, oracle disputes, and end-to-end integration flows.
+
+## Arc integration
+
+- **USDC settlement** — every trade clears in USDC on Arc
+- **Paymaster** — gas paid in USDC, no ETH balance needed
+- **Sub-second finality** — instant fills feel like a centralized book
+- **~$0.01 fees** — micro-positions are economically viable
+- **Circle SDK** — wallet management hooks ready
+
+## Project structure
 
 ```
 arc-prediction-dex/
-├── amm.py              # AMM trading engine (CPAMM)
-├── orderbook.py        # Central Limit Order Book (CLOB)
-├── market_engine.py    # Market lifecycle management
-├── liquidity_pool.py   # Liquidity pool & LP tokens
-├── oracle.py           # Resolution oracle (UMA-style)
-├── portfolio.py        # Position tracking & P&L
-├── analytics.py        # Market analytics engine
-├── trading_sdk.py      # Python SDK (zero dependencies)
-├── app.py              # Flask REST API (30+ endpoints)
-├── cli.py              # CLI trading tool
-├── templates/
-│   └── index.html      # Web dashboard
-├── tests/
-│   ├── test_amm.py     # AMM engine tests
-│   ├── test_orderbook.py # Order book tests
-│   ├── test_market.py  # Market & oracle tests
-│   └── test_integration.py # E2E integration tests
-├── Dockerfile          # Docker support
-├── docker-compose.yml  # Docker orchestration
-└── requirements.txt    # Python dependencies
+├── pythia_agent.py      ← AI trading agent
+├── amm.py               ← CPAMM trading engine
+├── orderbook.py         ← Limit order book
+├── market_engine.py     ← Market lifecycle
+├── liquidity_pool.py    ← LP token management
+├── oracle.py            ← UMA-style oracle
+├── portfolio.py         ← Position + P&L tracking
+├── analytics.py         ← Market intelligence
+├── trading_sdk.py       ← Python SDK
+├── app.py               ← Flask app + API
+├── cli.py               ← CLI tool
+├── seed_demo.py         ← Demo data seeder
+├── templates/           ← 8 dashboard pages
+│   ├── index.html
+│   ├── market_detail.html
+│   ├── portfolio.html
+│   ├── orders.html
+│   ├── create.html
+│   ├── agent.html
+│   ├── leaderboard.html
+│   └── resolve.html
+├── tests/               ← 80 tests
+├── Dockerfile
+└── requirements.txt
 ```
-
-## Arc Integration
-
-This project is designed to integrate with Arc's infrastructure:
-
-- **USDC Settlement**: All trades settle in USDC on Arc
-- **Paymaster**: Gas fees paid in USDC (no ETH needed)
-- **Sub-second Finality**: Instant trade confirmation
-- **~$0.01 Fees**: Makes micro-prediction markets viable
-- **Circle SDK**: Wallet management via Circle's APIs
-
-## Use Cases
-
-1. **Crypto Price Predictions** - "Will BTC hit $200k?"
-2. **Event Outcomes** - "Who will win the 2028 election?"
-3. **Sports Betting** - "Will Lakers win the championship?"
-4. **AI Agent Markets** - "Will GPT-5 pass the bar exam?"
-5. **DeFi Protocol Events** - "Will ETH merge succeed?"
 
 ## License
 
-MIT License
+MIT

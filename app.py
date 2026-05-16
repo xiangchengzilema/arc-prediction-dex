@@ -48,11 +48,12 @@ _order_books = {}
 
 
 # Seed demo data on first import (idempotent — skips if data exists)
-try:
-    from seed_demo import seed_if_empty
-    seed_if_empty(db_path=DB_PATH)
-except Exception as _e:
-    print(f"Seed skipped: {_e}")
+if not os.environ.get("PREDICT_DEX_SKIP_SEED"):
+    try:
+        from seed_demo import seed_if_empty
+        seed_if_empty(db_path=DB_PATH)
+    except Exception as _e:
+        print(f"Seed skipped: {_e}")
 
 
 # Pythia AI agent — autonomous trading loop. Started after seeding so the
@@ -64,7 +65,8 @@ pythia = PythiaAgent(
     portfolio=portfolio,
     analytics=analytics,
 )
-pythia.start()
+if not os.environ.get("PREDICT_DEX_SKIP_AGENT"):
+    pythia.start()
 
 
 def get_amm(market_id: str) -> AMMPool:
