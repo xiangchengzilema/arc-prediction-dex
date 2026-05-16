@@ -35,8 +35,10 @@
         .status-open { color: #3fb950; }
         .status-closed { color: #f85149; }
         .status-resolved { color: #d29922; }
-        .market-question { font-weight: 600; font-size: 1rem; color: #e6edf3; text-decoration: none; }
-        .market-question:hover { color: var(--arc-blue); }
+        .market-question { font-weight: 600; font-size: 1rem; color: #e6edf3 !important; text-decoration: none; display: inline-block; }
+        .market-question:hover { color: var(--arc-blue) !important; }
+        .btn-trade { background: var(--arc-blue); color: white; border: none; padding: 6px 16px; border-radius: 6px; font-size: 0.82rem; font-weight: 600; text-decoration: none; display: inline-block; transition: all 0.15s; }
+        .btn-trade:hover { background: #1557b0; color: white; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(26, 115, 232, 0.3); }
         .api-link { color: #8b949e; font-size: 0.8rem; text-decoration: none; }
         .api-link:hover { color: var(--arc-blue); }
         .hero-tagline { color: #8b949e; font-size: 0.95rem; max-width: 720px; line-height: 1.55; }
@@ -126,7 +128,7 @@
                     <span>holds: <span style="color:#d29922;">{{ agent.recent_holds if agent else 0 }}</span></span>
                 </div>
             </div>
-            <div class="card-body" style="max-height: 360px; overflow-y: auto;" id="agent-log">
+            <div class="card-body" style="max-height: 240px; overflow-y: auto;" id="agent-log">
                 {% if agent and agent.decisions %}
                     {% for d in agent.decisions %}
                     <div class="decision-row {{ d.action|lower }}">
@@ -177,6 +179,7 @@
                             <th>Volume</th>
                             <th>Status</th>
                             <th>Category</th>
+                            <th></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -203,6 +206,11 @@
                             </td>
                             <td>
                                 <span class="category-badge">{{ mkt.category }}</span>
+                            </td>
+                            <td class="text-end">
+                                <a href="/market/{{ mkt.market_id }}" class="btn-trade">
+                                    <i class="bi bi-lightning-charge-fill"></i> Trade
+                                </a>
                             </td>
                         </tr>
                         {% endfor %}
