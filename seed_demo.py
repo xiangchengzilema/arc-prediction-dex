@@ -74,9 +74,9 @@ def seed_if_empty(db_path: str = None):
         mid = market_ids[t["market_idx"]]
         pool = AMMPool(mid, db_path=db_path)
         try:
-            pool.buy_outcome(t["outcome"], t["amount"], user_id=t["user"], max_slippage_pct=15)
-        except Exception:
-            pass
+            pool.buy_outcome(t["outcome"], t["amount"], user_id=t["user"], max_slippage=0.15)
+        except Exception as e:
+            print(f"Seed trade failed: {e}")
     return True
 
 
