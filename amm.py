@@ -579,3 +579,25 @@ if __name__ == "__main__":
     print(f"\nNew prices after buy:")
     print(f"  YES: {pool.get_price('YES'):.4f}")
     print(f"  NO:  {pool.get_price('NO'):.4f}")
+
+
+    def estimate_price_impact(self, outcome: str, amount_usdc: float) -> float:
+        """Return expected price impact (in %) for a buy of given size, without executing.
+
+        Useful for showing slippage warnings in the UI before the user confirms.
+        """
+        if amount_usdc <= 0 or self.yes_reserve <= 0 or self.no_reserve <= 0:
+            return 0.0
+        price_before = self.get_price(outcome)
+        if outcome.upper() == "YES":
+            new_no = self.no_reserve + amount_usdc
+            new_yes = (self.yes_reserve * self.no_reserve) / new_no
+            shares_out = self.yes_reserve - new_yes
+        else:
+            new_yes = self.yes_reserve + amount_usdc
+            new_no = (self.yes_reserve * self.no_reserve) / new_yes
+            shares_out = self.no_reserve - new_yes
+        if shares_out <= 0:
+            return 0.0
+        avg_price = amount_usdc / shares_out
+        return abs(avg_price - price_before) / price_before * 100 if price_before > 0 else 0.0
