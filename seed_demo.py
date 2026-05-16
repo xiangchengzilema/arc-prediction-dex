@@ -68,6 +68,7 @@ def seed_if_empty(db_path: str = None):
         pool = AMMPool(mid, db_path=db_path)
         pool.initialize(m["initial_liquidity"], creator_id="demo_seed")
         liquidity_mgr.create_pool(mid, m["initial_liquidity"], "demo_seed")
+        engine.open_market(mid, initial_liquidity=m["initial_liquidity"])
 
     for t in DEMO_TRADES:
         mid = market_ids[t["market_idx"]]
