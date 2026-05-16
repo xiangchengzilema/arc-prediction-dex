@@ -643,6 +643,12 @@ def orders_page(user_id="alice"):
     return render_template("orders.html", user_id=user_id, orders=open_rows)
 
 
+@app.route("/create")
+def create_market_page():
+    """Market creation form — calls POST /api/markets under the hood."""
+    return render_template("create.html")
+
+
 # ─── Liquidity ────────────────────────────────────────────────
 
 @app.route("/api/liquidity/add", methods=["POST"])

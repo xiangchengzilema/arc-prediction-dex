@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Market · Pythia</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        :root { --arc-blue: #1a73e8; --arc-dark: #0d1117; --arc-card: #161b22; --arc-border: #30363d; --arc-green:#3fb950; --arc-red:#f85149; --arc-amber:#d29922; }
+        body { background: var(--arc-dark); color: #e6edf3; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        .card { background: var(--arc-card); border: 1px solid var(--arc-border); border-radius: 12px; }
+        .card-header { border-bottom: 1px solid var(--arc-border); background: rgba(255,255,255,0.01); }
+        .nav-brand { font-weight: 700; font-size: 1.3rem; color: var(--arc-blue) !important; letter-spacing:-0.5px; }
+        .bg-arc { background: var(--arc-card); }
+        .text-muted-arc { color: #8b949e; }
+        .nav-link-arc { color: #8b949e; font-size: 0.85rem; padding: 0 12px; }
+        .nav-link-arc:hover, .nav-link-arc.active { color: var(--arc-blue); }
+        a { color: var(--arc-blue); text-decoration: none; }
+        a:hover { color: #4a90e2; }
+        .form-label { color: #c9d1d9; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px; }
+        .form-hint  { color: #8b949e; font-size: 0.78rem; margin-top: 4px; }
+        .form-control, .form-select {
+            background: #0d1117; border: 1px solid var(--arc-border); color: #e6edf3;
+            border-radius: 6px; padding: 8px 12px; font-size: 0.9rem;
+        }
+        .form-control:focus, .form-select:focus {
+            background: #0d1117; color: #e6edf3; border-color: var(--arc-blue);
+            box-shadow: 0 0 0 3px rgba(26,115,232,0.2); outline: none;
+        }
+        .input-group-text {
+            background: #0d1117; border: 1px solid var(--arc-border); color: #8b949e;
+            font-size: 0.85rem; border-radius: 6px 0 0 6px;
+        }
+        .btn-create {
+            background: linear-gradient(135deg, var(--arc-blue), #4a90e2); color: white;
+            border: none; padding: 10px 24px; font-weight: 600; border-radius: 6px;
+            font-size: 0.92rem;
+        }
+        .btn-create:hover { background: linear-gradient(135deg, #1559b8, #3a7fcc); color: white; }
+        .btn-create:disabled { opacity: 0.5; cursor: not-allowed; }
+        .preview-card {
+            background: rgba(26,115,232,0.05); border: 1px dashed rgba(26,115,232,0.3);
+            border-radius: 10px; padding: 16px;
+        }
+        .preview-q { font-size: 1.05rem; font-weight: 600; color: #e6edf3; }
+        .preview-meta { color: #8b949e; font-size: 0.8rem; margin-top: 8px; }
+        .pill { display:inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.72rem; font-weight: 600; margin-right: 4px; }
+        .pill-yes { background: rgba(63,185,80,0.15); color: var(--arc-green); }
+        .pill-no  { background: rgba(248,81,73,0.15); color: var(--arc-red); }
+        .pill-cat { background: rgba(26,115,232,0.15); color: var(--arc-blue); }
+        .toast-container { position: fixed; top: 80px; right: 20px; z-index: 1080; }
+        .live-dot { display:inline-block; width:7px; height:7px; border-radius:50%; background:#3fb950; box-shadow:0 0 8px #3fb950; animation: pulse 1.6s infinite; }
+        @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+        .step-tag {
+            display: inline-block; width: 22px; height: 22px; border-radius: 50%;
+            background: var(--arc-blue); color: white; font-size: 0.78rem;
+            font-weight: 700; text-align: center; line-height: 22px; margin-right: 8px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-arc border-bottom border-dark">
+        <div class="container">
+            <a class="navbar-brand nav-brand" href="/"><i class="bi bi-cpu"></i> Pythia</a>
+            <div class="d-flex align-items-center">
+                <a href="/" class="nav-link-arc"><i class="bi bi-bar-chart-line"></i> Markets</a>
+                <a href="/create" class="nav-link-arc active"><i class="bi bi-plus-circle"></i> Create</a>
+                <a href="/portfolio" class="nav-link-arc"><i class="bi bi-wallet2"></i> Portfolio</a>
+                <a href="/orders" class="nav-link-arc"><i class="bi bi-list-check"></i> Orders</a>
+                <a href="/leaderboard" class="nav-link-arc"><i class="bi bi-trophy"></i> Leaderboard</a>
+                <a href="/agent" class="nav-link-arc"><i class="bi bi-robot"></i> Agent</a>
+                <a href="/resolve" class="nav-link-arc"><i class="bi bi-shield-check"></i> Resolve</a>
+                <span class="badge bg-success ms-2"><span class="live-dot"></span> Live</span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4" style="max-width: 1000px;">
+        <div class="mb-4">
+            <h3 style="font-weight:700;"><i class="bi bi-plus-circle text-info"></i> Create market</h3>
+            <p class="text-muted-arc mb-0" style="font-size:0.9rem;">Spin up a binary YES/NO prediction market with an AMM seed pool. Resolution via UMA-style optimistic oracle on the deadline.</p>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-lg-7">
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h6 class="mb-0"><span class="step-tag">1</span> Question</h6>
+                    </div>
+                    <div class="card-body">
+                        <label class="form-label">Yes/No question</label>
+                        <input type="text" class="form-control" id="f-question"
+                               placeholder="Will BTC close above $150,000 by Dec 31, 2026?"
+                               maxlength="240" />
+                        <div class="form-hint">Be specific. Include a clear cutoff date or numeric threshold so resolution is unambiguous.</div>
+
+                        <label class="form-label mt-3">Description (optional)</label>
+                        <textarea class="form-control" id="f-description" rows="2"
+                                  placeholder="What does YES mean? Which exchange/source counts as the truth?"></textarea>
+                    </div>
+                </div>
+
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h6 class="mb-0"><span class="step-tag">2</span> Settings</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Resolution deadline</label>
+                                <input type="datetime-local" class="form-control" id="f-deadline" />
+                                <div class="form-hint">Auto-closes & opens for resolution at this time.</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Category</label>
+                                <select class="form-select" id="f-category">
+                                    <option value="crypto">Crypto</option>
+                                    <option value="sports">Sports</option>
+                                    <option value="politics">Politics</option>
+                                    <option value="tech">Tech</option>
+                                    <option value="economics">Economics</option>
+                                    <option value="general">General</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Initial liquidity (USDC)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" class="form-control" id="f-liquidity"
+                                           value="500" min="100" step="50" />
+                                </div>
+                                <div class="form-hint">Seeds AMM at 0.50/0.50. Min 100 USDC.</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Trading fee (bps)</label>
+                                <input type="number" class="form-control" id="f-fee"
+                                       value="100" min="0" max="500" step="10" />
+                                <div class="form-hint">100 bps = 1%. Goes to LPs + protocol.</div>
+                            </div>
+                            <div class="col-md-12">
+                                <label class="form-label">Creator ID</label>
+                                <input type="text" class="form-control" id="f-creator"
+                                       value="alice" />
+                                <div class="form-hint">Used as the LP recipient and market author.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-body">
+                        <button class="btn-create w-100" id="btn-submit">
+                            <i class="bi bi-rocket-takeoff"></i> Create market
+                        </button>
+                        <div class="form-hint text-center mt-2">
+                            Calls <code>POST /api/markets</code> · seeds AMM via <code>pool.initialize()</code> · auto-opens for trading.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-5">
+                <div class="card mb-3">
+                    <div class="card-header"><h6 class="mb-0"><i class="bi bi-eye"></i> Live preview</h6></div>
+                    <div class="card-body">
+                        <div class="preview-card">
+                            <div class="preview-q" id="prev-q">Your question will appear here...</div>
+                            <div id="prev-desc" class="text-muted-arc" style="font-size:0.85rem;margin-top:6px;"></div>
+                            <div class="mt-3">
+                                <span class="pill pill-yes">YES @ $0.50</span>
+                                <span class="pill pill-no">NO @ $0.50</span>
+                            </div>
+                            <div class="preview-meta">
+                                <i class="bi bi-tag"></i> <span class="pill pill-cat" id="prev-cat">crypto</span>
+                                <i class="bi bi-clock ms-2"></i> <span id="prev-deadline">no deadline</span>
+                            </div>
+                            <div class="preview-meta">
+                                <i class="bi bi-droplet"></i> <span id="prev-liq">$500</span> initial liquidity
+                                · <i class="bi bi-percent"></i> <span id="prev-fee">100</span> bps fee
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header"><h6 class="mb-0"><i class="bi bi-info-circle"></i> How resolution works</h6></div>
+                    <div class="card-body" style="font-size:0.85rem; color:#c9d1d9;">
+                        <p class="mb-2"><strong>1.</strong> Market trades freely until deadline.</p>
+                        <p class="mb-2"><strong>2.</strong> Anyone can propose YES or NO with a 100 USDC bond.</p>
+                        <p class="mb-2"><strong>3.</strong> Disputers can challenge during the dispute window.</p>
+                        <p class="mb-0"><strong>4.</strong> Token holders vote; winners split the loser's bond.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toasts"></div>
+
+    <footer class="text-center text-muted-arc py-4 mt-4 border-top" style="border-color: var(--arc-border) !important;">
+        <small>Pythia · Built on <a href="https://docs.arc.network" class="text-info">Arc Network</a> · USDC native</small>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    function toast(msg, ok=true) {
+        const el = document.createElement('div');
+        el.className = 'toast show mb-2';
+        el.style.background = ok ? '#1a3a26' : '#3a1a1a';
+        el.style.border = `1px solid ${ok ? '#3fb950' : '#f85149'}`;
+        el.style.color = '#e6edf3';
+        el.style.minWidth = '320px';
+        el.innerHTML = `<div class="toast-body">${msg}</div>`;
+        document.getElementById('toasts').appendChild(el);
+        setTimeout(() => el.remove(), 5000);
+    }
+
+    // Default deadline: 30 days from now, end of day local
+    (function setDefaultDeadline() {
+        const d = new Date();
+        d.setDate(d.getDate() + 30);
+        d.setHours(23, 59, 0, 0);
+        const pad = n => String(n).padStart(2,'0');
+        const v = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        document.getElementById('f-deadline').value = v;
+    })();
+
+    function refreshPreview() {
+        const q   = document.getElementById('f-question').value.trim();
+        const dsc = document.getElementById('f-description').value.trim();
+        const cat = document.getElementById('f-category').value;
+        const dl  = document.getElementById('f-deadline').value;
+        const liq = document.getElementById('f-liquidity').value;
+        const fee = document.getElementById('f-fee').value;
+        document.getElementById('prev-q').textContent = q || 'Your question will appear here...';
+        document.getElementById('prev-desc').textContent = dsc;
+        document.getElementById('prev-cat').textContent = cat;
+        document.getElementById('prev-deadline').textContent = dl
+            ? new Date(dl).toLocaleString() : 'no deadline';
+        document.getElementById('prev-liq').textContent = '$' + Number(liq||0).toLocaleString();
+        document.getElementById('prev-fee').textContent = fee || '0';
+    }
+    ['f-question','f-description','f-category','f-deadline','f-liquidity','f-fee'].forEach(id => {
+        document.getElementById(id).addEventListener('input', refreshPreview);
+    });
+    refreshPreview();
+
+    document.getElementById('btn-submit').addEventListener('click', async () => {
+        const btn = document.getElementById('btn-submit');
+        const q   = document.getElementById('f-question').value.trim();
+        if (q.length < 10) { toast('Question must be at least 10 characters.', false); return; }
+        const dl  = document.getElementById('f-deadline').value;
+        if (!dl) { toast('Deadline is required.', false); return; }
+        const liq = parseFloat(document.getElementById('f-liquidity').value);
+        if (liq < 100) { toast('Initial liquidity must be at least 100 USDC.', false); return; }
+
+        const payload = {
+            question: q,
+            outcomes: ['YES', 'NO'],
+            description: document.getElementById('f-description').value.trim(),
+            deadline: new Date(dl).toISOString(),
+            category: document.getElementById('f-category').value,
+            tags: [document.getElementById('f-category').value],
+            initial_liquidity: liq,
+            fee_bps: parseInt(document.getElementById('f-fee').value, 10) || 100,
+            creator_id: document.getElementById('f-creator').value.trim() || 'anonymous',
+        };
+
+        const orig = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Creating...';
+        try {
+            const r = await fetch('/api/markets', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload),
+            });
+            const d = await r.json();
+            if (r.ok) {
+                toast(`<i class="bi bi-check-circle-fill text-success"></i> Market created · <a href="/market/${d.market_id}" class="text-info">View →</a>`);
+                setTimeout(() => location.href = '/market/' + d.market_id, 1500);
+            } else {
+                toast(d.error || 'Create failed', false);
+                btn.disabled = false;
+                btn.innerHTML = orig;
+            }
+        } catch (e) {
+            toast('Network error', false);
+            btn.disabled = false;
+            btn.innerHTML = orig;
+        }
+    });
+    </script>
+</body>
+</html>
