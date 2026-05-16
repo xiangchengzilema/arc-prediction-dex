@@ -232,32 +232,39 @@ class AMMPool:
         sy, sn = pool["shares_yes"], pool["shares_no"]
         k = pool["k_constant"]
 
-        # Calculate fee
+        # Calculate fee (USDC layer)
         fee = amount_usdc * fee_rate
         net_amount = amount_usdc - fee
         lp_fee = fee * 0.8  # 80% to LPs, 20% to protocol
 
-        # Calculate shares received using constant product formula
-        # Buying an outcome means taking shares FROM that side of the pool.
-        # To keep x*y=k, we add USDC to the OPPOSITE side.
+        # Constant-product AMM for binary outcomes (Maniswap-style):
+        # Both YES and NO pools accept USDC. Buying YES means we add USDC
+        # to BOTH sides equally (because each USDC entitles user to either
+        # outcome), then withdraw YES tokens until k is restored.
+        #
+        # Step 1: deposit `net_amount` USDC -> add to both sides equally.
+        sy1 = sy + net_amount
+        sn1 = sn + net_amount
+        # Step 2: withdraw shares from the chosen side until sy*sn = k holds.
         if outcome == "YES":
-            # Add to NO side, calculate how many YES shares we can take
-            new_sn = sn + net_amount
+            new_sn = sn1
             new_sy = k / new_sn
-            shares_received = sy - new_sy
+            shares_received = sy1 - new_sy
         else:
-            # Add to YES side, calculate how many NO shares we can take
-            new_sy = sy + net_amount
+            new_sy = sy1
             new_sn = k / new_sy
-            shares_received = sn - new_sn
+            shares_received = sn1 - new_sn
 
         if shares_received <= 0:
             raise ValueError("Trade too small to produce shares")
 
-        # Calculate prices
-        price_before = sn / (sy + sn) if outcome == "YES" else sy / (sy + sn)
-        price_after = new_sn / (new_sy + new_sn) if outcome == "YES" else new_sy / (new_sy + new_sn)
+        # Calculate prices (always in [0, 1] for binary AMM)
+        price_before = sy / (sy + sn) if outcome == "YES" else sn / (sy + sn)
+        price_after = new_sy / (new_sy + new_sn) if outcome == "YES" else new_sn / (new_sy + new_sn)
         avg_price = amount_usdc / shares_received
+        # Defensive clamp: avg_price is bounded by [price_before, 1.0] for buys.
+        if avg_price > 1.0:
+            avg_price = 1.0
         price_impact = abs(price_after - price_before) / price_before if price_before > 0 else 0
 
         # Check slippage
