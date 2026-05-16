@@ -39,6 +39,22 @@
         .market-question:hover { color: var(--arc-blue); }
         .api-link { color: #8b949e; font-size: 0.8rem; text-decoration: none; }
         .api-link:hover { color: var(--arc-blue); }
+        .hero-tagline { color: #8b949e; font-size: 0.95rem; max-width: 720px; line-height: 1.55; }
+        .hero-pill { display: inline-block; background: rgba(26, 115, 232, 0.12); color: var(--arc-blue); border: 1px solid rgba(26, 115, 232, 0.3); padding: 4px 10px; border-radius: 14px; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
+        .agent-card { background: linear-gradient(135deg, rgba(26, 115, 232, 0.08), rgba(46, 160, 67, 0.04)); border: 1px solid rgba(26, 115, 232, 0.25); }
+        .agent-status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #3fb950; box-shadow: 0 0 8px rgba(63, 185, 80, 0.6); animation: pulse 1.6s infinite; margin-right: 6px; vertical-align: middle; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+        .decision-row { border-left: 2px solid var(--arc-border); padding: 10px 14px; margin-bottom: 8px; background: rgba(13, 17, 23, 0.5); border-radius: 0 6px 6px 0; font-size: 0.85rem; }
+        .decision-row.buy { border-left-color: #3fb950; }
+        .decision-row.hold { border-left-color: #d29922; }
+        .decision-row.skip { border-left-color: #8b949e; }
+        .decision-time { color: #6e7681; font-size: 0.72rem; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+        .decision-action { font-weight: 700; font-size: 0.78rem; padding: 1px 7px; border-radius: 4px; }
+        .action-buy { background: rgba(63, 185, 80, 0.15); color: #3fb950; }
+        .action-hold { background: rgba(210, 153, 34, 0.15); color: #d29922; }
+        .action-skip { background: rgba(139, 148, 158, 0.15); color: #8b949e; }
+        .decision-rationale { color: #c9d1d9; margin-top: 4px; }
+        .decision-meta { color: #6e7681; font-size: 0.75rem; margin-top: 2px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
     </style>
 </head>
 <body>
@@ -46,16 +62,29 @@
     <nav class="navbar navbar-dark bg-arc border-bottom border-dark">
         <div class="container">
             <a class="navbar-brand nav-brand" href="/">
-                <i class="bi bi-graph-up-arrow"></i> Arc Prediction DEX
+                <i class="bi bi-cpu"></i> Pythia <span class="text-muted-arc" style="font-weight:400;font-size:0.85rem;">· Prediction DEX on Arc</span>
             </a>
             <div class="d-flex align-items-center gap-3">
+                <a href="/api/agent/status" class="api-link"><i class="bi bi-robot"></i> Agent</a>
                 <a href="/api/health" class="api-link"><i class="bi bi-code-slash"></i> API</a>
-                <span class="badge bg-success">Live</span>
+                <span class="badge bg-success"><span class="agent-status-dot"></span>Live</span>
             </div>
         </div>
     </nav>
 
     <div class="container mt-4">
+        <!-- Hero -->
+        <div class="mb-4">
+            <span class="hero-pill">AI Agent · Autonomous trading</span>
+            <h2 class="mt-2 mb-2" style="color:#e6edf3;font-weight:700;">Pythia trades prediction markets on Arc</h2>
+            <p class="hero-tagline mb-0">
+                Pythia is an autonomous agent that scans live AMM prices, compares them to its
+                internal probability model, and opens positions on under-priced outcomes using
+                Kelly-fractional sizing. Every decision below is on-chain ready and settles
+                through Arc's USDC-native rails.
+            </p>
+        </div>
+
         <!-- Stats Cards -->
         <div class="row g-3 mb-4">
             <div class="col-md-3">
@@ -81,6 +110,49 @@
                     <div class="stat-value">${{ "{:,.0f}".format(stats.total_tvl or 0) }}</div>
                     <div class="stat-label">Total TVL</div>
                 </div>
+            </div>
+        </div>
+
+        <!-- Pythia Agent Activity -->
+        <div class="card agent-card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="bi bi-robot"></i> Pythia Agent · Live Decisions
+                </h5>
+                <div class="d-flex align-items-center gap-3 text-muted-arc" style="font-size:0.8rem;">
+                    <span><span class="agent-status-dot"></span>{{ agent.status if agent else 'idle' }}</span>
+                    <span>cycle: {{ agent.cycle_seconds if agent else '--' }}s</span>
+                    <span>buys: <span style="color:#3fb950;">{{ agent.recent_buys if agent else 0 }}</span></span>
+                    <span>holds: <span style="color:#d29922;">{{ agent.recent_holds if agent else 0 }}</span></span>
+                </div>
+            </div>
+            <div class="card-body" style="max-height: 360px; overflow-y: auto;" id="agent-log">
+                {% if agent and agent.decisions %}
+                    {% for d in agent.decisions %}
+                    <div class="decision-row {{ d.action|lower }}">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <span class="decision-action action-{{ d.action|lower }}">{{ d.action }}</span>
+                                {% if d.outcome %}<span class="text-muted-arc" style="font-size:0.78rem;margin-left:6px;">{{ d.outcome }}{% if d.amount_usdc %} · ${{ "%.2f"|format(d.amount_usdc) }}{% endif %}</span>{% endif %}
+                                <span class="text-muted-arc" style="font-size:0.78rem;margin-left:6px;">on</span>
+                                <span style="color:#e6edf3;font-size:0.85rem;">{{ d.market_question }}</span>
+                            </div>
+                            <span class="decision-time">{{ d.timestamp[11:19] if d.timestamp else '--' }}</span>
+                        </div>
+                        <div class="decision-rationale">{{ d.rationale }}</div>
+                        <div class="decision-meta">
+                            price={{ "%.3f"|format(d.current_price) }}
+                            · target={{ "%.3f"|format(d.target_prob) }}
+                            · edge={{ "%+.3f"|format(d.edge) }}
+                            {% if d.pnl_estimate is not none %} · expected_pnl={{ "%+.2f"|format(d.pnl_estimate) }}{% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-muted-arc text-center py-4">
+                        <i class="bi bi-hourglass-split"></i> Pythia is warming up. First decision cycle in &lt; 30s.
+                    </div>
+                {% endif %}
             </div>
         </div>
 
@@ -111,7 +183,7 @@
                         {% for mkt in markets %}
                         <tr>
                             <td>
-                                <div class="market-question">{{ mkt.question }}</div>
+                                <a href="/market/{{ mkt.market_id }}" class="market-question">{{ mkt.question }}</a><br>
                                 <small class="text-muted-arc">ID: {{ mkt.market_id }}</small>
                             </td>
                             <td>
@@ -194,5 +266,55 @@
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    // Auto-refresh Pythia agent activity every 20s without full page reload.
+    (function() {
+        const log = document.getElementById('agent-log');
+        if (!log) return;
+
+        function actionClass(a) { return 'action-' + (a || '').toLowerCase(); }
+        function rowClass(a)    { return 'decision-row ' + (a || '').toLowerCase(); }
+        function fmt(n, d=3)    { return (n === null || n === undefined) ? '--' : Number(n).toFixed(d); }
+        function fmtSign(n, d=3){ if (n === null || n === undefined) return '--'; const s = n >= 0 ? '+' : ''; return s + Number(n).toFixed(d); }
+
+        function render(decisions) {
+            if (!decisions || !decisions.length) {
+                log.innerHTML = '<div class="text-muted-arc text-center py-4"><i class="bi bi-hourglass-split"></i> Pythia is warming up.</div>';
+                return;
+            }
+            log.innerHTML = decisions.map(d => {
+                const time = (d.timestamp || '').slice(11, 19) || '--';
+                const meta = `price=${fmt(d.current_price)} · target=${fmt(d.target_prob)} · edge=${fmtSign(d.edge)}` +
+                             (d.pnl_estimate !== null && d.pnl_estimate !== undefined ? ` · expected_pnl=${fmtSign(d.pnl_estimate, 2)}` : '');
+                const sub = (d.outcome ? `<span class="text-muted-arc" style="font-size:0.78rem;margin-left:6px;">${d.outcome}` +
+                             (d.amount_usdc ? ` · $${Number(d.amount_usdc).toFixed(2)}` : '') + '</span>' : '');
+                return `<div class="${rowClass(d.action)}">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <span class="decision-action ${actionClass(d.action)}">${d.action}</span>
+                            ${sub}
+                            <span class="text-muted-arc" style="font-size:0.78rem;margin-left:6px;">on</span>
+                            <span style="color:#e6edf3;font-size:0.85rem;">${(d.market_question || '').replace(/[<>]/g, '')}</span>
+                        </div>
+                        <span class="decision-time">${time}</span>
+                    </div>
+                    <div class="decision-rationale">${(d.rationale || '').replace(/[<>]/g, '')}</div>
+                    <div class="decision-meta">${meta}</div>
+                </div>`;
+            }).join('');
+        }
+
+        async function tick() {
+            try {
+                const r = await fetch('/api/agent/status?limit=15', { cache: 'no-store' });
+                if (!r.ok) return;
+                const data = await r.json();
+                render(data.decisions || []);
+            } catch (e) { /* silent */ }
+        }
+
+        setInterval(tick, 20000);
+    })();
+    </script>
 </body>
 </html>

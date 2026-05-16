@@ -28,6 +28,7 @@ from liquidity_pool import LiquidityPoolManager
 from oracle import ResolutionOracle
 from portfolio import PortfolioManager
 from analytics import MarketAnalytics
+from agent import PythiaAgent
 
 app = Flask(__name__)
 
@@ -52,6 +53,16 @@ try:
     seed_if_empty(db_path=DB_PATH)
 except Exception as _e:
     print(f"Seed skipped: {_e}")
+
+
+# Pythia AI agent — autonomous trading loop. Started after seeding so the
+# agent always has at least the demo markets to evaluate.
+pythia = PythiaAgent(
+    market_engine=market_engine,
+    get_amm_pool=lambda mid: get_amm(mid),
+    db_path=DB_PATH,
+)
+pythia.start()
 
 
 def get_amm(market_id: str) -> AMMPool:
@@ -97,7 +108,36 @@ def dashboard():
         "total_volume": total_volume,
         "total_tvl": total_tvl,
     }
-    return render_template("index.html", markets=markets, stats=stats)
+    agent_state = pythia.snapshot(limit=15)
+    return render_template("index.html", markets=markets, stats=stats,
+                           agent=agent_state)
+
+
+@app.route("/market/<market_id>")
+def market_detail(market_id):
+    """Market detail page with trading UI."""
+    market = market_engine.get_market(market_id)
+    if not market:
+        return render_template("index.html", markets=[], stats={
+            "total_markets": 0, "open_markets": 0,
+            "total_volume": 0, "total_tvl": 0,
+        }, agent=pythia.snapshot(limit=5)), 404
+
+    try:
+        pool = get_amm(market_id)
+        market["yes_price"] = pool.get_price("YES")
+        market["no_price"] = 1.0 - market["yes_price"]
+    except Exception:
+        market["yes_price"] = 0.5
+        market["no_price"] = 0.5
+
+    try:
+        stats = market_engine.get_market_stats(market_id) or {}
+    except Exception:
+        stats = {}
+
+    return render_template("market_detail.html", market=market,
+                           market_stats=stats)
 
 
 # ─── Health & Stats ───────────────────────────────────────────
@@ -539,6 +579,15 @@ def analytics_trending():
 def analytics_system():
     """Get system-wide analytics."""
     return jsonify(analytics.get_system_stats())
+
+
+# ─── Pythia AI Agent ──────────────────────────────────────────
+
+@app.route("/api/agent/status", methods=["GET"])
+def agent_status():
+    """Get Pythia agent status and recent decisions."""
+    limit = int(request.args.get("limit", 30))
+    return jsonify(pythia.snapshot(limit=limit))
 
 
 if __name__ == "__main__":
