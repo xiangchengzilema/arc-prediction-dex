@@ -29,6 +29,7 @@ from oracle import ResolutionOracle
 from portfolio import PortfolioManager
 from analytics import MarketAnalytics
 from agent import PythiaAgent
+from keeper import MarketKeeper
 
 app = Flask(__name__)
 
@@ -69,6 +70,14 @@ if not os.environ.get("PREDICT_DEX_SKIP_AGENT"):
     pythia.start()
 
 
+# Market keeper — closes expired markets, auto-resolves CLOSED ones after the
+# dispute window, and replenishes the pool of active markets so the homepage
+# always feels alive. Skip with PREDICT_DEX_SKIP_KEEPER=1 in tests.
+keeper = MarketKeeper(db_path=DB_PATH)
+if not os.environ.get("PREDICT_DEX_SKIP_KEEPER"):
+    keeper.start()
+
+
 def get_amm(market_id: str) -> AMMPool:
     """Get or create AMM pool for a market."""
     if market_id not in _amm_pools:
@@ -88,8 +97,15 @@ def get_ob(market_id: str) -> OrderBook:
 @app.route("/")
 def dashboard():
     """Web dashboard homepage."""
-    markets_data = market_engine.list_markets(status="OPEN", limit=20)
+    markets_data = market_engine.list_markets(limit=50)
     markets = markets_data.get("markets", [])
+
+    # Sort: OPEN first, then CLOSED/DISPUTED, then RESOLVED, then SETTLED
+    status_order = {"OPEN": 0, "CLOSED": 1, "DISPUTED": 1, "RESOLVED": 2, "SETTLED": 3, "DRAFT": 4}
+    markets.sort(key=lambda m: (status_order.get(m.get("status", ""), 5), m.get("created_at", "")))
+
+    # Stats compute on OPEN only for the hero
+    open_markets = [m for m in markets if m.get("status") == "OPEN"]
 
     # Enrich markets with real-time AMM prices
     total_volume = 0
@@ -108,7 +124,7 @@ def dashboard():
 
     stats = {
         "total_markets": markets_data.get("total", 0),
-        "open_markets": len(markets),
+        "open_markets": len(open_markets),
         "total_volume": total_volume,
         "total_tvl": total_tvl,
     }
@@ -438,6 +454,27 @@ def amm_buy():
     amount = data.get("amount_usdc", 0)
     slippage = data.get("max_slippage", 0.05)
     user_id = data.get("user_id", "anonymous")
+
+    # Guard: reject trades on markets that aren't OPEN or are past deadline.
+    try:
+        mkt = market_engine.get_market(market_id)
+        if not mkt:
+            return jsonify({"error": "Market not found"}), 404
+        if mkt.get("status") != "OPEN":
+            return jsonify({"error": f"Market is {mkt.get('status','closed').lower()} — trading paused"}), 400
+        from datetime import datetime, timezone
+        dl_raw = (mkt.get("deadline") or "").replace("Z", "+00:00")
+        if dl_raw:
+            try:
+                dl = datetime.fromisoformat(dl_raw)
+                if dl.tzinfo is None:
+                    dl = dl.replace(tzinfo=timezone.utc)
+                if dl <= datetime.now(timezone.utc):
+                    return jsonify({"error": "Market deadline has passed"}), 400
+            except ValueError:
+                pass
+    except Exception:
+        pass  # If guard fails, fall through to original error handling.
 
     try:
         pool = get_amm(market_id)
@@ -937,6 +974,12 @@ def agent_pnl():
             "open_positions": 0, "closed_positions": 0,
             "win_rate": 0, "error": str(e),
         })
+
+
+@app.route("/api/keeper/status")
+def keeper_status():
+    """Market keeper snapshot — last sweep, recent close/mint events."""
+    return jsonify(keeper.snapshot())
 
 
 @app.errorhandler(404)

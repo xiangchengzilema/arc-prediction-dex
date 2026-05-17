@@ -220,6 +220,13 @@
 
                     <div class="px-flex" style="gap:6px;align-items:center;font-size:0.7rem;color:var(--text-3);margin-bottom:12px;font-family:'JetBrains Mono', monospace;letter-spacing:0.04em;">
                         <span class="px-market-status {{ mkt.status|lower }}">{{ mkt.status }}</span>
+                        {% set st = mkt.status|upper %}
+                        <span class="px-lc-mini" title="Lifecycle: Open → Closed → Resolved → Settled">
+                            <span class="px-lc-mini-pip {% if st == 'OPEN' %}current{% elif st in ['CLOSED','DISPUTED','RESOLVED','SETTLED'] %}done{% endif %}"></span>
+                            <span class="px-lc-mini-pip {% if st in ['CLOSED','DISPUTED'] %}current{% elif st in ['RESOLVED','SETTLED'] %}done{% endif %}"></span>
+                            <span class="px-lc-mini-pip {% if st == 'RESOLVED' %}current{% elif st == 'SETTLED' %}done{% endif %}"></span>
+                            <span class="px-lc-mini-pip {% if st == 'SETTLED' %}current{% endif %}"></span>
+                        </span>
                         <span style="margin-left:auto;">{{ mkt.deadline[:10] }}</span>
                     </div>
 

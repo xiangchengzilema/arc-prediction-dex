@@ -2656,3 +2656,104 @@ body .market-link:hover { color: var(--brand-primary-2); }
     margin-left: 6px;
     vertical-align: middle;
 }
+
+/* ============================================================
+   Market lifecycle progress (Open → Closed → Resolved → Settled)
+   ============================================================ */
+.px-lifecycle {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 14px 18px;
+    background: var(--bg-elev-2);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--r-md);
+    margin-bottom: 20px;
+}
+.px-lc-step {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+}
+.px-lc-step:last-child { flex: 0; }
+.px-lc-dot {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--bg-elev-3);
+    border: 1.5px solid var(--border-mid);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 800;
+    color: var(--text-3);
+    flex-shrink: 0;
+    transition: all .3s;
+}
+.px-lc-step.done .px-lc-dot {
+    background: var(--grad-brand);
+    border-color: var(--brand-primary);
+    color: #fff;
+    box-shadow: 0 0 10px rgba(124,92,255,0.4);
+}
+.px-lc-step.current .px-lc-dot {
+    background: var(--bg-elev-1);
+    border-color: var(--brand-accent);
+    color: var(--brand-accent);
+    animation: px-pulse-ring 2s infinite;
+}
+@keyframes px-pulse-ring {
+    0%,100% { box-shadow: 0 0 0 0 rgba(0,212,168,0.4); }
+    50%     { box-shadow: 0 0 0 8px rgba(0,212,168,0); }
+}
+.px-lc-label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-3);
+    white-space: nowrap;
+}
+.px-lc-step.done .px-lc-label { color: var(--text-1); }
+.px-lc-step.current .px-lc-label { color: var(--brand-accent); }
+.px-lc-bar {
+    flex: 1;
+    height: 2px;
+    background: var(--border-soft);
+    margin: 0 10px;
+    border-radius: 999px;
+    position: relative;
+    overflow: hidden;
+}
+.px-lc-bar.done {
+    background: var(--grad-brand);
+}
+.px-lc-bar.current::after {
+    content: "";
+    position: absolute;
+    inset: 0 50% 0 0;
+    background: var(--brand-accent);
+    opacity: 0.6;
+}
+@media (max-width: 720px) {
+    .px-lifecycle { flex-wrap: wrap; gap: 8px; padding: 10px 12px; }
+    .px-lc-bar { display: none; }
+    .px-lc-label { font-size: 0.72rem; }
+}
+
+/* Tiny lifecycle pip on market cards */
+.px-lc-mini {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+}
+.px-lc-mini-pip {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--bg-elev-3);
+    border: 1px solid var(--border-mid);
+}
+.px-lc-mini-pip.done { background: var(--brand-primary); border-color: var(--brand-primary); }
+.px-lc-mini-pip.current { background: var(--brand-accent); border-color: var(--brand-accent); box-shadow: 0 0 6px var(--brand-accent); }

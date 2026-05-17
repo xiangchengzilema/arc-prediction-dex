@@ -45,6 +45,37 @@
         <p class="px-text-2 mb-3" style="font-size:0.95rem;line-height:1.55;max-width:760px;">{{ market.description }}</p>
         {% endif %}
 
+        {# Market lifecycle progress: Open → Closed → Resolved → Settled #}
+        {% set status = market.status|upper %}
+        {% set steps = [
+            ('Open',     ['OPEN']),
+            ('Closed',   ['CLOSED','DISPUTED']),
+            ('Resolved', ['RESOLVED']),
+            ('Settled',  ['SETTLED'])
+        ] %}
+        {% set order = ['DRAFT','OPEN','CLOSED','DISPUTED','RESOLVED','SETTLED'] %}
+        {% set cur_idx = order.index(status) if status in order else 0 %}
+        <div class="px-lifecycle">
+            {% for label, statuses in steps %}
+            {% set step_idx = loop.index0 %}
+            {% set passed = (status == 'OPEN' and step_idx == 0) or
+                            (status in ['CLOSED','DISPUTED'] and step_idx <= 1) or
+                            (status == 'RESOLVED' and step_idx <= 2) or
+                            (status == 'SETTLED' and step_idx <= 3) %}
+            {% set is_current = status in statuses %}
+            {% set is_done = passed and not is_current %}
+            <div class="px-lc-step {% if is_current %}current{% elif is_done %}done{% endif %}">
+                <span class="px-lc-dot">
+                    {% if is_done %}<i class="bi bi-check"></i>{% else %}{{ loop.index }}{% endif %}
+                </span>
+                <span class="px-lc-label">{{ label }}</span>
+            </div>
+            {% if not loop.last %}
+            <div class="px-lc-bar {% if passed and not is_current %}done{% elif is_current %}current{% endif %}"></div>
+            {% endif %}
+            {% endfor %}
+        </div>
+
         <!-- Pythia view (filled by JS) -->
         <div class="px-card pythia-view px-mb-6" id="pythia-view-card" style="display:none;margin-bottom:20px;">
             <div class="pythia-view-content">
