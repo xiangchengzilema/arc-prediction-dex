@@ -6,69 +6,43 @@
     <title>Portfolio · {{ user_id }} · Pythia</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
-    <style>
-        :root { --arc-blue: #1a73e8; --arc-dark: #0d1117; --arc-card: #161b22; --arc-border: #30363d; --arc-green:#3fb950; --arc-red:#f85149; --arc-amber:#d29922; }
-        body { background: var(--arc-dark); color: #e6edf3; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-        .card { background: var(--arc-card); border: 1px solid var(--arc-border); border-radius: 12px; }
-        .card-header { border-bottom: 1px solid var(--arc-border); background: rgba(255,255,255,0.01); }
-        .nav-brand { font-weight: 700; font-size: 1.3rem; color: var(--arc-blue) !important; letter-spacing:-0.5px; }
-        .bg-arc { background: var(--arc-card); }
-        .text-muted-arc { color: #8b949e; }
-        .nav-link-arc { color: #8b949e; font-size: 0.85rem; padding: 0 12px; }
-        .nav-link-arc:hover, .nav-link-arc.active { color: var(--arc-blue); }
-        a { color: var(--arc-blue); text-decoration: none; }
-        a:hover { color: #4a90e2; }
-        .pnl-positive { color: var(--arc-green); font-weight:700; }
-        .pnl-negative { color: var(--arc-red); font-weight:700; }
-        .pnl-neutral  { color: #c9d1d9; }
-        .stat-card { background: var(--arc-card); border: 1px solid var(--arc-border); border-radius: 12px; padding: 18px; }
-        .stat-label { color: #8b949e; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
-        .stat-value { font-weight: 700; font-size: 1.5rem; }
-        .pos-row td { vertical-align: middle; padding: 12px; border-color: var(--arc-border); }
-        .table-dark-custom { color: #e6edf3; margin-bottom:0; }
-        .table-dark-custom th { border-color: var(--arc-border); color: #8b949e; font-weight: 600; font-size: 0.72rem; text-transform: uppercase; letter-spacing:0.5px; padding: 10px 12px; }
-        .outcome-yes { background: rgba(63,185,80,0.15); color: var(--arc-green); padding: 2px 8px; border-radius: 4px; font-size:0.78rem; font-weight:700; }
-        .outcome-no  { background: rgba(248,81,73,0.15); color: var(--arc-red);   padding: 2px 8px; border-radius: 4px; font-size:0.78rem; font-weight:700; }
-        .btn-close-pos { background: linear-gradient(135deg, #f85149, #da3633); color: white; border: none; padding: 6px 14px; font-weight: 600; border-radius: 6px; font-size:0.82rem; }
-        .btn-close-pos:hover { background: linear-gradient(135deg, #da3633, #b62324); color: white; }
-        .btn-close-pos:disabled { opacity: 0.5; cursor: not-allowed; }
-        .empty-state { padding: 60px 20px; text-align: center; color:#8b949e; }
-        .toast-container { position: fixed; top: 80px; right: 20px; z-index: 1080; }
-        .live-dot { display:inline-block; width:7px; height:7px; border-radius:50%; background:#3fb950; box-shadow:0 0 8px #3fb950; animation: pulse 1.6s infinite; }
-        @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
-        .user-input { background:#0d1117; border:1px solid var(--arc-border); color:#e6edf3; border-radius:6px; padding:6px 10px; font-size:0.85rem; }
-        .user-input:focus { outline:none; border-color: var(--arc-blue); }
-        .market-link { color: #c9d1d9; }
-        .market-link:hover { color: var(--arc-blue); }
-    </style>
+    <link href="{{ url_for('static', filename='css/pythia.css') }}" rel="stylesheet">
 </head>
 <body>
-    <nav class="navbar navbar-dark bg-arc border-bottom border-dark">
-        <div class="container">
-            <a class="navbar-brand nav-brand" href="/"><i class="bi bi-cpu"></i> Pythia</a>
-            <div class="d-flex align-items-center">
-                <a href="/" class="nav-link-arc"><i class="bi bi-bar-chart-line"></i> Markets</a>
-                <a href="/portfolio" class="nav-link-arc active"><i class="bi bi-wallet2"></i> Portfolio</a>
-                <a href="/orders" class="nav-link-arc"><i class="bi bi-list-check"></i> Orders</a>
-                <a href="/create" class="nav-link-arc"><i class="bi bi-plus-circle"></i> Create</a>
-                <a href="/leaderboard" class="nav-link-arc"><i class="bi bi-trophy"></i> Leaderboard</a>
-                <a href="/agent" class="nav-link-arc"><i class="bi bi-robot"></i> Agent</a>
-                <a href="/resolve" class="nav-link-arc"><i class="bi bi-shield-check"></i> Resolve</a>
-                <span class="badge bg-success ms-2"><span class="live-dot"></span> Live</span>
+        <nav class="px-nav">
+        <div class="px-nav-inner">
+            <a class="px-brand" href="/">
+                <span class="px-brand-mark">P</span>
+                Pythia <span class="px-brand-sub">· Prediction DEX</span>
+            </a>
+            <div class="px-nav-links">
+                <a href="/" class="px-nav-link"><i class="bi bi-house"></i> Home</a>
+                <a href="/portfolio" class="px-nav-link active"><i class="bi bi-wallet2"></i> Portfolio</a>
+                <a href="/orders" class="px-nav-link"><i class="bi bi-list-check"></i> Orders</a>
+                <a href="/create" class="px-nav-link"><i class="bi bi-plus-circle"></i> Create</a>
+                <a href="/leaderboard" class="px-nav-link"><i class="bi bi-trophy"></i> Top</a>
+                <a href="/agent" class="px-nav-link"><i class="bi bi-robot"></i> Agent</a>
+                <a href="https://github.com/xiangchengzilema/arc-prediction-dex" class="px-nav-link" target="_blank"><i class="bi bi-github"></i></a>
+                <span class="px-live-pill"><span class="px-pulse"></span>Live</span>
             </div>
         </div>
     </nav>
 
     <div class="container mt-4" style="max-width: 1100px;">
-        <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="d-flex justify-content-between align-items-center mb-3" style="flex-wrap:wrap;gap:12px;">
             <div>
                 <h3 style="font-weight:700;"><i class="bi bi-wallet2 text-info"></i> Portfolio · <span id="title-user">{{ user_id }}</span></h3>
                 <p class="text-muted-arc mb-0" style="font-size:0.9rem;">Live unrealized P&L computed at current AMM prices.</p>
             </div>
-            <form method="get" action="/portfolio" class="d-flex gap-2 align-items-center">
-                <label class="text-muted-arc" style="font-size:0.85rem;">View user:</label>
-                <input class="user-input" name="user" value="{{ user_id }}" />
-                <button class="btn btn-sm btn-outline-info" type="submit">Load</button>
+            <form method="get" action="/portfolio" class="px-user-switch">
+                <label>View user</label>
+                <input name="user" value="{{ user_id }}" placeholder="user_id" />
+                <div class="px-user-presets">
+                    <a href="/portfolio?user=pythia_agent" class="px-user-preset pythia {% if user_id == 'pythia_agent' %}active{% endif %}" title="View Pythia AI agent">
+                        <i class="bi bi-robot"></i> Pythia
+                    </a>
+                    <a href="/portfolio?user=demo_user" class="px-user-preset {% if user_id == 'demo_user' %}active{% endif %}">demo</a>
+                </div>
             </form>
         </div>
 
@@ -149,7 +123,12 @@
                 <div class="empty-state">
                     <i class="bi bi-inbox" style="font-size: 3rem; color: #30363d;"></i>
                     <p class="mt-2 mb-1">No open positions for <strong>{{ user_id }}</strong>.</p>
+                    {% if user_id == 'demo_user' %}
+                    <p style="font-size:0.85rem;color:var(--text-3);">Want to see the AI agent in action?</p>
+                    <a href="/portfolio?user=pythia_agent" class="px-empty-cta"><i class="bi bi-robot"></i> View Pythia's portfolio</a>
+                    {% else %}
                     <p style="font-size:0.85rem;"><a href="/">Browse markets</a> to open one.</p>
+                    {% endif %}
                 </div>
                 {% endif %}
             </div>
@@ -253,5 +232,6 @@
     // Auto-refresh every 30s
     setTimeout(() => location.reload(), 30000);
     </script>
+    <script src="{{ url_for('static', filename='js/pythia.js') }}"></script>
 </body>
 </html>

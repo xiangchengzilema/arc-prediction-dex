@@ -6,72 +6,24 @@
     <title>Create Market · Pythia</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
-    <style>
-        :root { --arc-blue: #1a73e8; --arc-dark: #0d1117; --arc-card: #161b22; --arc-border: #30363d; --arc-green:#3fb950; --arc-red:#f85149; --arc-amber:#d29922; }
-        body { background: var(--arc-dark); color: #e6edf3; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-        .card { background: var(--arc-card); border: 1px solid var(--arc-border); border-radius: 12px; }
-        .card-header { border-bottom: 1px solid var(--arc-border); background: rgba(255,255,255,0.01); }
-        .nav-brand { font-weight: 700; font-size: 1.3rem; color: var(--arc-blue) !important; letter-spacing:-0.5px; }
-        .bg-arc { background: var(--arc-card); }
-        .text-muted-arc { color: #8b949e; }
-        .nav-link-arc { color: #8b949e; font-size: 0.85rem; padding: 0 12px; }
-        .nav-link-arc:hover, .nav-link-arc.active { color: var(--arc-blue); }
-        a { color: var(--arc-blue); text-decoration: none; }
-        a:hover { color: #4a90e2; }
-        .form-label { color: #c9d1d9; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px; }
-        .form-hint  { color: #8b949e; font-size: 0.78rem; margin-top: 4px; }
-        .form-control, .form-select {
-            background: #0d1117; border: 1px solid var(--arc-border); color: #e6edf3;
-            border-radius: 6px; padding: 8px 12px; font-size: 0.9rem;
-        }
-        .form-control:focus, .form-select:focus {
-            background: #0d1117; color: #e6edf3; border-color: var(--arc-blue);
-            box-shadow: 0 0 0 3px rgba(26,115,232,0.2); outline: none;
-        }
-        .input-group-text {
-            background: #0d1117; border: 1px solid var(--arc-border); color: #8b949e;
-            font-size: 0.85rem; border-radius: 6px 0 0 6px;
-        }
-        .btn-create {
-            background: linear-gradient(135deg, var(--arc-blue), #4a90e2); color: white;
-            border: none; padding: 10px 24px; font-weight: 600; border-radius: 6px;
-            font-size: 0.92rem;
-        }
-        .btn-create:hover { background: linear-gradient(135deg, #1559b8, #3a7fcc); color: white; }
-        .btn-create:disabled { opacity: 0.5; cursor: not-allowed; }
-        .preview-card {
-            background: rgba(26,115,232,0.05); border: 1px dashed rgba(26,115,232,0.3);
-            border-radius: 10px; padding: 16px;
-        }
-        .preview-q { font-size: 1.05rem; font-weight: 600; color: #e6edf3; }
-        .preview-meta { color: #8b949e; font-size: 0.8rem; margin-top: 8px; }
-        .pill { display:inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.72rem; font-weight: 600; margin-right: 4px; }
-        .pill-yes { background: rgba(63,185,80,0.15); color: var(--arc-green); }
-        .pill-no  { background: rgba(248,81,73,0.15); color: var(--arc-red); }
-        .pill-cat { background: rgba(26,115,232,0.15); color: var(--arc-blue); }
-        .toast-container { position: fixed; top: 80px; right: 20px; z-index: 1080; }
-        .live-dot { display:inline-block; width:7px; height:7px; border-radius:50%; background:#3fb950; box-shadow:0 0 8px #3fb950; animation: pulse 1.6s infinite; }
-        @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
-        .step-tag {
-            display: inline-block; width: 22px; height: 22px; border-radius: 50%;
-            background: var(--arc-blue); color: white; font-size: 0.78rem;
-            font-weight: 700; text-align: center; line-height: 22px; margin-right: 8px;
-        }
-    </style>
+    <link href="{{ url_for('static', filename='css/pythia.css') }}" rel="stylesheet">
 </head>
 <body>
-    <nav class="navbar navbar-dark bg-arc border-bottom border-dark">
-        <div class="container">
-            <a class="navbar-brand nav-brand" href="/"><i class="bi bi-cpu"></i> Pythia</a>
-            <div class="d-flex align-items-center">
-                <a href="/" class="nav-link-arc"><i class="bi bi-bar-chart-line"></i> Markets</a>
-                <a href="/create" class="nav-link-arc active"><i class="bi bi-plus-circle"></i> Create</a>
-                <a href="/portfolio" class="nav-link-arc"><i class="bi bi-wallet2"></i> Portfolio</a>
-                <a href="/orders" class="nav-link-arc"><i class="bi bi-list-check"></i> Orders</a>
-                <a href="/leaderboard" class="nav-link-arc"><i class="bi bi-trophy"></i> Leaderboard</a>
-                <a href="/agent" class="nav-link-arc"><i class="bi bi-robot"></i> Agent</a>
-                <a href="/resolve" class="nav-link-arc"><i class="bi bi-shield-check"></i> Resolve</a>
-                <span class="badge bg-success ms-2"><span class="live-dot"></span> Live</span>
+        <nav class="px-nav">
+        <div class="px-nav-inner">
+            <a class="px-brand" href="/">
+                <span class="px-brand-mark">P</span>
+                Pythia <span class="px-brand-sub">· Prediction DEX</span>
+            </a>
+            <div class="px-nav-links">
+                <a href="/" class="px-nav-link"><i class="bi bi-house"></i> Home</a>
+                <a href="/portfolio" class="px-nav-link"><i class="bi bi-wallet2"></i> Portfolio</a>
+                <a href="/orders" class="px-nav-link"><i class="bi bi-list-check"></i> Orders</a>
+                <a href="/create" class="px-nav-link active"><i class="bi bi-plus-circle"></i> Create</a>
+                <a href="/leaderboard" class="px-nav-link"><i class="bi bi-trophy"></i> Top</a>
+                <a href="/agent" class="px-nav-link"><i class="bi bi-robot"></i> Agent</a>
+                <a href="https://github.com/xiangchengzilema/arc-prediction-dex" class="px-nav-link" target="_blank"><i class="bi bi-github"></i></a>
+                <span class="px-live-pill"><span class="px-pulse"></span>Live</span>
             </div>
         </div>
     </nav>
@@ -110,18 +62,35 @@
                             <div class="col-md-6">
                                 <label class="form-label">Resolution deadline</label>
                                 <input type="datetime-local" class="form-control" id="f-deadline" />
+                                <div class="d-flex gap-1 mt-2" id="dl-presets">
+                                    <button type="button" class="px-user-preset" data-days="1">+1d</button>
+                                    <button type="button" class="px-user-preset" data-days="7">+7d</button>
+                                    <button type="button" class="px-user-preset active" data-days="30">+30d</button>
+                                    <button type="button" class="px-user-preset" data-days="90">+90d</button>
+                                    <button type="button" class="px-user-preset" data-eoy="1">EOY</button>
+                                </div>
                                 <div class="form-hint">Auto-closes & opens for resolution at this time.</div>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Category</label>
-                                <select class="form-select" id="f-category">
+                                <select class="form-select" id="f-category" style="display:none;">
                                     <option value="crypto">Crypto</option>
                                     <option value="sports">Sports</option>
                                     <option value="politics">Politics</option>
                                     <option value="tech">Tech</option>
                                     <option value="economics">Economics</option>
+                                    <option value="ai">AI</option>
                                     <option value="general">General</option>
                                 </select>
+                                <div id="cat-chips">
+                                    <span class="chip active" data-cat="crypto"><i class="bi bi-currency-bitcoin"></i> Crypto</span>
+                                    <span class="chip" data-cat="ai"><i class="bi bi-cpu"></i> AI</span>
+                                    <span class="chip" data-cat="tech"><i class="bi bi-rocket"></i> Tech</span>
+                                    <span class="chip" data-cat="sports"><i class="bi bi-trophy"></i> Sports</span>
+                                    <span class="chip" data-cat="politics"><i class="bi bi-bank"></i> Politics</span>
+                                    <span class="chip" data-cat="economics"><i class="bi bi-graph-up"></i> Economics</span>
+                                    <span class="chip" data-cat="general"><i class="bi bi-globe"></i> General</span>
+                                </div>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Initial liquidity (USDC)</label>
@@ -246,6 +215,42 @@
     });
     refreshPreview();
 
+    // Deadline preset buttons
+    function setDeadlineDays(days) {
+        const d = new Date();
+        d.setDate(d.getDate() + days);
+        d.setHours(23, 59, 0, 0);
+        const pad = n => String(n).padStart(2,'0');
+        document.getElementById('f-deadline').value =
+            `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        refreshPreview();
+    }
+    function setDeadlineEOY() {
+        const d = new Date(new Date().getFullYear(), 11, 31, 23, 59);
+        const pad = n => String(n).padStart(2,'0');
+        document.getElementById('f-deadline').value =
+            `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        refreshPreview();
+    }
+    document.querySelectorAll('#dl-presets [data-days], #dl-presets [data-eoy]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('#dl-presets .px-user-preset').forEach(x => x.classList.remove('active'));
+            btn.classList.add('active');
+            if (btn.dataset.days) setDeadlineDays(parseInt(btn.dataset.days, 10));
+            else setDeadlineEOY();
+        });
+    });
+
+    // Category chips
+    document.querySelectorAll('#cat-chips .chip').forEach(c => {
+        c.addEventListener('click', () => {
+            document.querySelectorAll('#cat-chips .chip').forEach(x => x.classList.remove('active'));
+            c.classList.add('active');
+            document.getElementById('f-category').value = c.dataset.cat;
+            refreshPreview();
+        });
+    });
+
     document.getElementById('btn-submit').addEventListener('click', async () => {
         const btn = document.getElementById('btn-submit');
         const q   = document.getElementById('f-question').value.trim();
@@ -292,5 +297,6 @@
         }
     });
     </script>
+    <script src="{{ url_for('static', filename='js/pythia.js') }}"></script>
 </body>
 </html>

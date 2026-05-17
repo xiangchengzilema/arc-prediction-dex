@@ -939,6 +939,22 @@ def agent_pnl():
         })
 
 
+@app.errorhandler(404)
+def not_found(e):
+    if request.path.startswith("/api/"):
+        return jsonify({"error": "Not found", "path": request.path}), 404
+    return render_template("error.html", code=404,
+                           message="That page doesn't exist. Maybe the market was removed, or you mistyped the URL."), 404
+
+
+@app.errorhandler(500)
+def server_error(e):
+    if request.path.startswith("/api/"):
+        return jsonify({"error": "Internal server error"}), 500
+    return render_template("error.html", code=500,
+                           message="Something went wrong on our side. Pythia is still trading — try again in a moment."), 500
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT") or os.environ.get("PREDICT_DEX_PORT") or 5003)
     print(f"Starting Arc Prediction DEX API on port {port}...")

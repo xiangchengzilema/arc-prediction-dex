@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ code }} · Pythia</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/pythia.css') }}" rel="stylesheet">
+</head>
+<body>
+    <nav class="px-nav">
+        <div class="px-nav-inner">
+            <a class="px-brand" href="/">
+                <span class="px-brand-mark">P</span>
+                Pythia <span class="px-brand-sub">· Prediction DEX</span>
+            </a>
+            <div class="px-nav-links">
+                <a href="/" class="px-nav-link"><i class="bi bi-house"></i> Home</a>
+                <a href="/agent" class="px-nav-link"><i class="bi bi-robot"></i> Agent</a>
+                <a href="https://github.com/xiangchengzilema/arc-prediction-dex" class="px-nav-link" target="_blank"><i class="bi bi-github"></i></a>
+                <span class="px-live-pill"><span class="px-pulse"></span>Live</span>
+            </div>
+        </div>
+    </nav>
+
+    <section class="px-hero" style="padding:120px 32px 96px;">
+        <div class="px-hero-grid"></div>
+        <div class="px-hero-bg"></div>
+        <div class="px-hero-deco left"></div>
+        <div class="px-hero-deco right"></div>
+        <div class="px-hero-inner">
+            <span class="px-pill" style="margin-bottom:24px;"><span class="px-pill-dot" style="background:var(--warn);box-shadow:0 0 8px var(--warn);"></span> Error {{ code }}</span>
+            <h1 class="px-h1" style="font-size:clamp(3rem,9vw,6.5rem);">
+                <span class="px-h1-grad">{{ code }}</span>
+            </h1>
+            <p class="px-lead">{{ message }}</p>
+            <div class="px-cta-row" style="margin-bottom:0;">
+                <a href="/" class="px-btn px-btn-primary"><i class="bi bi-arrow-left"></i> Back to markets</a>
+                <a href="/agent" class="px-btn px-btn-ghost"><i class="bi bi-robot"></i> See Pythia trade</a>
+            </div>
+        </div>
+    </section>
+
+    <footer class="px-footer">
+        Pythia · built on <a href="https://docs.arc.network">Arc Network</a> ·
+        <a href="https://github.com/xiangchengzilema/arc-prediction-dex">source</a>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/pythia.js') }}"></script>
+</body>
+</html>

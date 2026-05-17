@@ -6,63 +6,24 @@
     <title>Resolve · Pythia</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
-    <style>
-        :root { --arc-blue: #1a73e8; --arc-dark: #0d1117; --arc-card: #161b22; --arc-border: #30363d; --arc-green:#3fb950; --arc-red:#f85149; --arc-amber:#d29922; }
-        body { background: var(--arc-dark); color: #e6edf3; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-        .card { background: var(--arc-card); border: 1px solid var(--arc-border); border-radius: 12px; }
-        .card-header { border-bottom: 1px solid var(--arc-border); background: rgba(255,255,255,0.01); }
-        .nav-brand { font-weight: 700; font-size: 1.3rem; color: var(--arc-blue) !important; letter-spacing:-0.5px; }
-        .bg-arc { background: var(--arc-card); }
-        .text-muted-arc { color: #8b949e; }
-        a { color: var(--arc-blue); text-decoration: none; }
-        a:hover { color: #4a90e2; }
-        .nav-link-arc { color: #8b949e; font-size: 0.85rem; padding: 0 12px; }
-        .nav-link-arc:hover, .nav-link-arc.active { color: var(--arc-blue); }
-        .form-control-arc { background: #0d1117; border: 1px solid var(--arc-border); color: #e6edf3; }
-        .form-control-arc:focus { background: #0d1117; border-color: var(--arc-blue); color: #e6edf3; box-shadow: 0 0 0 3px rgba(26,115,232,0.2); }
-        .proposal-card { background: rgba(210,153,34,0.05); border: 1px solid rgba(210,153,34,0.25); border-radius: 10px; padding: 16px; margin-bottom: 12px; transition: all 0.2s; }
-        .proposal-card:hover { border-color: rgba(210,153,34,0.5); }
-        .outcome-yes { background: rgba(63,185,80,0.15); color: var(--arc-green); padding: 3px 10px; border-radius: 12px; font-size: 0.75rem; font-weight:700; }
-        .outcome-no { background: rgba(248,81,73,0.15); color: var(--arc-red); padding: 3px 10px; border-radius: 12px; font-size: 0.75rem; font-weight:700; }
-        .status-pill { padding: 3px 10px; border-radius: 12px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; }
-        .status-proposed { background: rgba(210,153,34,0.15); color: var(--arc-amber); }
-        .status-disputed { background: rgba(248,81,73,0.15); color: var(--arc-red); }
-        .status-resolved { background: rgba(63,185,80,0.15); color: var(--arc-green); }
-        .status-settled { background: rgba(26,115,232,0.15); color: var(--arc-blue); }
-        .btn-action { background: var(--arc-blue); color: white; border: none; padding: 7px 14px; border-radius: 6px; font-size: 0.82rem; font-weight: 600; transition: all 0.15s; }
-        .btn-action:hover { background: #1557b0; color: white; }
-        .btn-action.danger { background: var(--arc-red); }
-        .btn-action.danger:hover { background: #da3633; }
-        .btn-action.success { background: var(--arc-green); }
-        .btn-action.success:hover { background: #2ea043; }
-        .evidence-block { background: rgba(0,0,0,0.2); border-left: 3px solid var(--arc-amber); padding: 10px 14px; margin-top: 10px; font-size: 0.85rem; color: #c9d1d9; border-radius: 0 6px 6px 0; }
-        .info-banner { background: rgba(26,115,232,0.05); border: 1px solid rgba(26,115,232,0.2); border-radius: 8px; padding: 14px; margin-bottom: 16px; font-size:0.85rem; color:#c9d1d9; }
-        .toast-container { position: fixed; top: 80px; right: 20px; z-index: 1080; }
-        .empty-state { padding: 40px 20px; text-align: center; color:#8b949e; }
-        .live-dot { display:inline-block; width:7px; height:7px; border-radius:50%; background:#3fb950; box-shadow:0 0 8px #3fb950; animation: pulse 1.6s infinite; }
-        @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
-        .resolved-row { padding: 10px 14px; border-bottom: 1px solid var(--arc-border); display: flex; justify-content: space-between; align-items: center; font-size: 0.88rem; }
-        .resolved-row:last-child { border-bottom: none; }
-        .winner-badge { font-weight: 700; font-size: 0.78rem; padding: 2px 8px; border-radius: 4px; }
-        .winner-yes { background: rgba(63,185,80,0.15); color: var(--arc-green); }
-        .winner-no  { background: rgba(248,81,73,0.15); color: var(--arc-red); }
-    </style>
+    <link href="{{ url_for('static', filename='css/pythia.css') }}" rel="stylesheet">
 </head>
 <body>
-    <nav class="navbar navbar-dark bg-arc border-bottom border-dark">
-        <div class="container">
-            <a class="navbar-brand nav-brand" href="/">
-                <i class="bi bi-cpu"></i> Pythia <span class="text-muted-arc" style="font-weight:400;font-size:0.85rem;">· Prediction DEX on Arc</span>
+        <nav class="px-nav">
+        <div class="px-nav-inner">
+            <a class="px-brand" href="/">
+                <span class="px-brand-mark">P</span>
+                Pythia <span class="px-brand-sub">· Prediction DEX</span>
             </a>
-            <div class="d-flex align-items-center">
-                <a href="/" class="nav-link-arc"><i class="bi bi-bar-chart-line"></i> Markets</a>
-                <a href="/portfolio" class="nav-link-arc"><i class="bi bi-wallet2"></i> Portfolio</a>
-                <a href="/orders" class="nav-link-arc"><i class="bi bi-list-check"></i> Orders</a>
-                <a href="/create" class="nav-link-arc"><i class="bi bi-plus-circle"></i> Create</a>
-                <a href="/leaderboard" class="nav-link-arc"><i class="bi bi-trophy"></i> Leaderboard</a>
-                <a href="/agent" class="nav-link-arc"><i class="bi bi-robot"></i> Agent</a>
-                <a href="/resolve" class="nav-link-arc active"><i class="bi bi-shield-check"></i> Resolve</a>
-                <span class="badge bg-success ms-2"><span class="live-dot"></span> Live</span>
+            <div class="px-nav-links">
+                <a href="/" class="px-nav-link"><i class="bi bi-house"></i> Home</a>
+                <a href="/portfolio" class="px-nav-link"><i class="bi bi-wallet2"></i> Portfolio</a>
+                <a href="/orders" class="px-nav-link"><i class="bi bi-list-check"></i> Orders</a>
+                <a href="/create" class="px-nav-link"><i class="bi bi-plus-circle"></i> Create</a>
+                <a href="/leaderboard" class="px-nav-link"><i class="bi bi-trophy"></i> Top</a>
+                <a href="/agent" class="px-nav-link"><i class="bi bi-robot"></i> Agent</a>
+                <a href="https://github.com/xiangchengzilema/arc-prediction-dex" class="px-nav-link" target="_blank"><i class="bi bi-github"></i></a>
+                <span class="px-live-pill"><span class="px-pulse"></span>Live</span>
             </div>
         </div>
     </nav>
@@ -334,5 +295,6 @@
         });
     });
     </script>
+    <script src="{{ url_for('static', filename='js/pythia.js') }}"></script>
 </body>
 </html>

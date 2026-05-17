@@ -6,99 +6,69 @@
     <title>Pythia Agent · Control room</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
-    <style>
-        :root { --arc-blue: #1a73e8; --arc-dark: #0d1117; --arc-card: #161b22; --arc-border: #30363d; --arc-green:#3fb950; --arc-red:#f85149; --arc-amber:#d29922; }
-        body { background: var(--arc-dark); color: #e6edf3; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-        .card { background: var(--arc-card); border: 1px solid var(--arc-border); border-radius: 12px; }
-        .card-header { border-bottom: 1px solid var(--arc-border); background: rgba(255,255,255,0.01); }
-        .nav-brand { font-weight: 700; font-size: 1.3rem; color: var(--arc-blue) !important; letter-spacing:-0.5px; }
-        .bg-arc { background: var(--arc-card); }
-        .text-muted-arc { color: #8b949e; }
-        .nav-link-arc { color: #8b949e; font-size: 0.85rem; padding: 0 12px; }
-        .nav-link-arc:hover, .nav-link-arc.active { color: var(--arc-blue); }
-        a { color: var(--arc-blue); text-decoration: none; }
-        a:hover { color: #4a90e2; }
-        .pnl-positive { color: var(--arc-green); font-weight: 700; }
-        .pnl-negative { color: var(--arc-red); font-weight: 700; }
-        .pnl-neutral  { color: #c9d1d9; }
-        .stat-card { background: var(--arc-card); border: 1px solid var(--arc-border); border-radius: 12px; padding: 18px; }
-        .stat-label { color: #8b949e; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
-        .stat-value { font-weight: 700; font-size: 1.5rem; }
-        .agent-badge { display:inline-flex; align-items:center; gap:6px; background: linear-gradient(135deg, rgba(63,185,80,0.18), rgba(26,115,232,0.18)); border: 1px solid rgba(63,185,80,0.4); padding: 6px 14px; border-radius: 999px; font-size:0.78rem; font-weight:700; color: var(--arc-green); }
-        .live-dot { display:inline-block; width:7px; height:7px; border-radius:50%; background:#3fb950; box-shadow:0 0 8px #3fb950; animation: pulse 1.6s infinite; }
-        @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
-        .decision { padding: 12px 14px; border-bottom: 1px solid var(--arc-border); transition: background 0.2s; }
-        .decision:last-child { border-bottom: none; }
-        .decision:hover { background: rgba(255,255,255,0.02); }
-        .decision-buy { border-left: 3px solid var(--arc-green); }
-        .decision-hold { border-left: 3px solid var(--arc-amber); }
-        .decision-skip { border-left: 3px solid #6e7681; }
-        .action-pill { padding: 2px 10px; border-radius: 12px; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.4px; }
-        .action-buy { background: rgba(63,185,80,0.15); color: var(--arc-green); }
-        .action-hold { background: rgba(210,153,34,0.15); color: var(--arc-amber); }
-        .action-skip { background: rgba(110,118,129,0.2); color: #8b949e; }
-        .edge-positive { color: var(--arc-green); }
-        .edge-negative { color: var(--arc-red); }
-        .edge-neutral  { color: #8b949e; }
-        .bar-track { width: 100%; height: 6px; background: #21262d; border-radius: 3px; overflow: hidden; position: relative; margin-top: 4px; }
-        .bar-target { position: absolute; top: -2px; width: 2px; height: 10px; background: var(--arc-blue); }
-        .bar-current { height: 100%; background: linear-gradient(90deg, #3fb950, #1a73e8); transition: width 0.5s; }
-        .market-row { padding: 12px; border-bottom: 1px solid var(--arc-border); }
-        .market-row:last-child { border-bottom: none; }
-        .market-row:hover { background: rgba(26,115,232,0.04); }
-        .ts { color: #6e7681; font-size: 0.72rem; font-family: ui-monospace, 'SF Mono', Menlo, monospace; }
-        .rationale { color: #c9d1d9; font-size: 0.82rem; line-height: 1.5; margin-top: 4px; }
-        .empty-state { padding: 40px 20px; text-align: center; color:#8b949e; }
-    </style>
+    <link href="{{ url_for('static', filename='css/pythia.css') }}" rel="stylesheet">
 </head>
 <body>
-    <nav class="navbar navbar-dark bg-arc border-bottom border-dark">
-        <div class="container">
-            <a class="navbar-brand nav-brand" href="/"><i class="bi bi-cpu"></i> Pythia</a>
-            <div class="d-flex align-items-center">
-                <a href="/" class="nav-link-arc"><i class="bi bi-bar-chart-line"></i> Markets</a>
-                <a href="/portfolio" class="nav-link-arc"><i class="bi bi-wallet2"></i> Portfolio</a>
-                <a href="/orders" class="nav-link-arc"><i class="bi bi-list-check"></i> Orders</a>
-                <a href="/create" class="nav-link-arc"><i class="bi bi-plus-circle"></i> Create</a>
-                <a href="/leaderboard" class="nav-link-arc"><i class="bi bi-trophy"></i> Leaderboard</a>
-                <a href="/agent" class="nav-link-arc active"><i class="bi bi-robot"></i> Agent</a>
-                <a href="/resolve" class="nav-link-arc"><i class="bi bi-shield-check"></i> Resolve</a>
-                <span class="badge bg-success ms-2"><span class="live-dot"></span> Live</span>
+    <nav class="px-nav">
+        <div class="px-nav-inner">
+            <a class="px-brand" href="/">
+                <span class="px-brand-mark">P</span>
+                Pythia <span class="px-brand-sub">· Prediction DEX</span>
+            </a>
+            <div class="px-nav-links">
+                <a href="/" class="px-nav-link"><i class="bi bi-house"></i> Home</a>
+                <a href="/portfolio" class="px-nav-link"><i class="bi bi-wallet2"></i> Portfolio</a>
+                <a href="/orders" class="px-nav-link"><i class="bi bi-list-check"></i> Orders</a>
+                <a href="/create" class="px-nav-link"><i class="bi bi-plus-circle"></i> Create</a>
+                <a href="/leaderboard" class="px-nav-link"><i class="bi bi-trophy"></i> Top</a>
+                <a href="/agent" class="px-nav-link active"><i class="bi bi-robot"></i> Agent</a>
+                <a href="https://github.com/xiangchengzilema/arc-prediction-dex" class="px-nav-link" target="_blank"><i class="bi bi-github"></i></a>
+                <span class="px-live-pill"><span class="px-pulse"></span>Live</span>
             </div>
         </div>
     </nav>
 
-    <div class="container mt-4" style="max-width: 1100px;">
-        <div class="d-flex justify-content-between align-items-start mb-4">
+    <div class="px-container" style="padding-top:32px;">
+        <div class="d-flex justify-content-between align-items-start mb-4" style="flex-wrap:wrap;gap:16px;">
             <div>
-                <h3 style="font-weight:700;"><i class="bi bi-robot text-success"></i> Pythia · AI control room</h3>
-                <p class="text-muted-arc mb-0" style="font-size:0.9rem;">
-                    Autonomous agent · {{ agent.cycle_seconds }}s cycle · Kelly sizing · last cycle:
-                    <span class="ts">{{ agent.last_cycle_at or 'pending' }}</span>
+                <span class="px-pill" style="margin-bottom:14px;">
+                    <span class="px-pill-dot"></span>
+                    Autonomous AI · {{ agent.cycle_seconds }}s cycle · Kelly-fractional sizing
+                </span>
+                <h1 style="font-weight:800;font-size:2.4rem;letter-spacing:-0.03em;margin:0 0 6px;line-height:1.1;">
+                    Pythia · <span class="px-h1-grad">control room</span>
+                </h1>
+                <p class="px-text-3 mb-0" style="font-size:0.92rem;">
+                    Last cycle: <span class="ts">{{ agent.last_cycle_at or 'pending' }}</span>
                 </p>
             </div>
             <span class="agent-badge"><span class="live-dot"></span> {{ agent.status }}</span>
         </div>
 
-        <div class="row g-2 mb-4">
-            <div class="col-md-3 col-6"><div class="stat-card text-center">
-                <div class="stat-label">Total P&L</div>
-                <div class="stat-value {% if (pnl.total_pnl or 0) > 0 %}pnl-positive{% elif (pnl.total_pnl or 0) < 0 %}pnl-negative{% else %}pnl-neutral{% endif %}">
-                    {% if (pnl.total_pnl or 0) >= 0 %}+{% endif %}${{ "%.2f"|format(pnl.total_pnl or 0) }}
+        <!-- Big PnL hero strip -->
+        <div class="px-card px-card-glow px-mb-6" style="margin-bottom:28px;">
+            <div class="px-card-body">
+                <div class="px-pnl-grid">
+                    <div class="px-pnl-tile">
+                        <div class="px-pnl-label">Total P&L</div>
+                        <div class="px-pnl-value {% if (pnl.total_pnl or 0) > 0 %}px-pnl-positive{% elif (pnl.total_pnl or 0) < 0 %}px-pnl-negative{% else %}px-pnl-neutral{% endif %}" style="font-size:2rem;">
+                            {% if (pnl.total_pnl or 0) >= 0 %}+{% endif %}${{ "%.2f"|format(pnl.total_pnl or 0) }}
+                        </div>
+                    </div>
+                    <div class="px-pnl-tile">
+                        <div class="px-pnl-label">Win rate</div>
+                        <div class="px-pnl-value px-pnl-neutral" style="font-size:2rem;">{{ "%.0f"|format((pnl.win_rate or 0) * 100) }}%</div>
+                    </div>
+                    <div class="px-pnl-tile">
+                        <div class="px-pnl-label">Open positions</div>
+                        <div class="px-pnl-value" style="color:var(--brand-primary-2);font-size:2rem;">{{ pnl.open_positions or 0 }}</div>
+                    </div>
+                    <div class="px-pnl-tile">
+                        <div class="px-pnl-label">Recent buys</div>
+                        <div class="px-pnl-value px-pnl-positive" style="font-size:2rem;">{{ agent.recent_buys or 0 }}</div>
+                    </div>
                 </div>
-            </div></div>
-            <div class="col-md-3 col-6"><div class="stat-card text-center">
-                <div class="stat-label">Win rate</div>
-                <div class="stat-value pnl-neutral">{{ "%.0f"|format((pnl.win_rate or 0) * 100) }}%</div>
-            </div></div>
-            <div class="col-md-3 col-6"><div class="stat-card text-center">
-                <div class="stat-label">Open positions</div>
-                <div class="stat-value" style="color:var(--arc-blue);">{{ pnl.open_positions or 0 }}</div>
-            </div></div>
-            <div class="col-md-3 col-6"><div class="stat-card text-center">
-                <div class="stat-label">Recent buys</div>
-                <div class="stat-value pnl-positive">{{ agent.recent_buys or 0 }}</div>
-            </div></div>
+            </div>
         </div>
 
         <div class="row g-3">
@@ -185,5 +155,6 @@
     // Auto-refresh every 20s to show live agent activity
     setTimeout(() => location.reload(), 20000);
     </script>
+    <script src="{{ url_for('static', filename='js/pythia.js') }}"></script>
 </body>
 </html>
