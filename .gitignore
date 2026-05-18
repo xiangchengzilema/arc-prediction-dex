@@ -18,3 +18,11 @@ htmlcov/
 .idea/
 .vscode/
 commit_state.json
+
+# demo_video — keep scripts, exclude generated artifacts
+demo_video/frames/
+demo_video/audio/
+demo_video/clips/
+demo_video/output/
+demo_video/slides/
+demo_video/__pycache__/
