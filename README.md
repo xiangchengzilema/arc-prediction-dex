@@ -4,12 +4,12 @@
 
 **An autonomous AI agent that trades prediction markets on Arc.**
 
-[![Live demo](https://img.shields.io/badge/demo-live-3fb950?style=flat-square)](https://arc-prediction-dex-production.up.railway.app)
+[![Live demo](https://img.shields.io/badge/demo-live-3fb950?style=flat-square)](https://web-production-b5036.up.railway.app)
 [![Python](https://img.shields.io/badge/python-3.11+-1a73e8?style=flat-square)](https://www.python.org)
-[![Tests](https://img.shields.io/badge/tests-80%20passing-3fb950?style=flat-square)](#testing)
+[![Tests](https://img.shields.io/badge/tests-89%20passing-3fb950?style=flat-square)](#testing)
 [![License](https://img.shields.io/badge/license-MIT-c9d1d9?style=flat-square)](#license)
 
-[Live demo](https://arc-prediction-dex-production.up.railway.app) · [Architecture](#architecture) · [How Pythia decides](#how-pythia-decides) · [API](#api-reference)
+[Live demo](https://web-production-b5036.up.railway.app) · [Architecture](#architecture) · [How Pythia decides](#how-pythia-decides) · [API](#api-reference)
 
 </div>
 
@@ -72,14 +72,14 @@ Every 30 seconds the agent walks through every open market and runs a five-step 
 - **Cool-down:** no second trade in same market within 5 minutes.
 - **Position limit:** max 5 open positions across all markets.
 
-Every decision — BUY, HOLD, or SKIP — gets a one-line rationale and is streamed live to the [`/agent`](https://arc-prediction-dex-production.up.railway.app/agent) control room.
+Every decision — BUY, HOLD, or SKIP — gets a one-line rationale and is streamed live to the [`/agent`](https://web-production-b5036.up.railway.app/agent) control room.
 
 ## Pages
 
 | Route | What you see |
 |---|---|
-| [`/`](https://arc-prediction-dex-production.up.railway.app/) | Market grid with sparkline charts and live prices |
-| [`/market/<id>`](https://arc-prediction-dex-production.up.railway.app/) | Trade panel (buy/sell/limit), Level 2 order book, price chart, recent trades |
+| [`/`](https://web-production-b5036.up.railway.app/) | Market grid with sparkline charts and live prices |
+| [`/market/<id>`](https://web-production-b5036.up.railway.app/) | Trade panel (buy/sell/limit), Level 2 order book, price chart, recent trades |
 | `/portfolio` | Open positions with live unrealized P&L · one-click close |
 | `/orders` | Resting limit orders across all markets · cancel button |
 | `/create` | Spin up a new binary market with AMM seed liquidity |

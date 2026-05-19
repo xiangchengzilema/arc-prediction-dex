@@ -822,8 +822,23 @@ def get_trades(user_id):
 
 @app.route("/api/portfolio/<user_id>/pnl", methods=["GET"])
 def get_pnl(user_id):
-    """Get user P&L."""
-    return jsonify(portfolio.calculate_pnl(user_id))
+    """Get user P&L. Returns zeros + error message on failure (e.g. AMM price
+    lookup fails for a stale market) instead of 500ing the dashboard."""
+    try:
+        return jsonify(portfolio.calculate_pnl(user_id))
+    except Exception as e:
+        return jsonify({
+            "user_id": user_id,
+            "open_positions": 0,
+            "closed_positions": 0,
+            "total_cost": 0,
+            "total_value": 0,
+            "total_pnl": 0,
+            "realized_pnl": 0,
+            "unrealized_pnl": 0,
+            "roi_pct": 0,
+            "error": str(e),
+        }), 200
 
 
 @app.route("/api/portfolio/leaderboard", methods=["GET"])
