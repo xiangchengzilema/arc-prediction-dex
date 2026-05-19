@@ -114,7 +114,7 @@ Every decision — BUY, HOLD, or SKIP — gets a one-line rationale and is strea
 
 | File | What it does |
 |---|---|
-| [`pythia_agent.py`](pythia_agent.py) | Autonomous trading agent — belief formation, Kelly sizing, decision log |
+| [`agent.py`](agent.py) | Autonomous trading agent — belief formation, Kelly sizing, decision log |
 | [`amm.py`](amm.py) | Constant-product AMM with slippage protection and LP tokens |
 | [`orderbook.py`](orderbook.py) | CLOB with price-time priority, FOK/IOC, Level 2 depth |
 | [`market_engine.py`](market_engine.py) | Market lifecycle: create → open → trade → close → resolve → settle |
