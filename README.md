@@ -122,6 +122,7 @@ Every decision — BUY, HOLD, or SKIP — gets a one-line rationale and is strea
 | [`oracle.py`](oracle.py) | UMA-style optimistic resolution with bonded proposals + disputes |
 | [`portfolio.py`](portfolio.py) | Position tracking, realized/unrealized P&L, DCA, leaderboard |
 | [`analytics.py`](analytics.py) | Volume, manipulation detection, implied probabilities |
+| [`keeper.py`](keeper.py) | Background lifecycle keeper — auto-close at deadline, auto-resolve after dispute window, replenish from a 20-market pool |
 | [`trading_sdk.py`](trading_sdk.py) | Zero-dependency Python SDK |
 | [`app.py`](app.py) | Flask app — 8 dashboard routes + 30+ JSON endpoints |
 | [`cli.py`](cli.py) | Command-line trading tool |
