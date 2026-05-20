@@ -544,20 +544,37 @@ def recent_trades(market_id):
 
 @app.route("/api/trade/amm/quote", methods=["GET"])
 def amm_quote():
-    """Get a price quote without executing."""
+    """Get a price quote without executing.
+
+    Hardened: returns 400 with a friendly error instead of 500ing the
+    front-end live-quote panel when callers pass a bad market_id, an
+    unknown outcome, or a non-numeric amount.
+    """
     market_id = request.args.get("market_id")
     outcome = request.args.get("outcome", "YES")
-    amount = float(request.args.get("amount_usdc", 100))
+    try:
+        amount = float(request.args.get("amount_usdc", 100))
+    except (TypeError, ValueError):
+        return jsonify({"error": "amount_usdc must be numeric"}), 400
+    if not market_id:
+        return jsonify({"error": "market_id required"}), 400
+    if outcome not in ("YES", "NO"):
+        return jsonify({"error": "outcome must be YES or NO"}), 400
+    if amount <= 0:
+        return jsonify({"error": "amount_usdc must be > 0"}), 400
 
-    pool = get_amm(market_id)
-    slip = pool.calculate_slippage(outcome, amount)
-    return jsonify({
-        "market_id": market_id,
-        "outcome": outcome,
-        "amount_usdc": amount,
-        "current_price": pool.get_price(outcome),
-        "slippage": slip,
-    })
+    try:
+        pool = get_amm(market_id)
+        slip = pool.calculate_slippage(outcome, amount)
+        return jsonify({
+            "market_id": market_id,
+            "outcome": outcome,
+            "amount_usdc": amount,
+            "current_price": pool.get_price(outcome),
+            "slippage": slip,
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
 
 
 # ─── Order Book ───────────────────────────────────────────────
