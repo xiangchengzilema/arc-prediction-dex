@@ -330,14 +330,23 @@ def health():
 
 @app.route("/api/stats")
 def system_stats():
-    """System-wide statistics."""
-    markets = market_engine.list_markets(limit=1000)
-    sys_analytics = analytics.get_system_stats()
-    return jsonify({
-        "total_markets": markets["total"],
-        "open_markets": len([m for m in markets["markets"] if m.get("status") == "OPEN"]),
-        "analytics": sys_analytics,
-    })
+    """System-wide statistics. Hardened: returns zeros + error on any
+    backend failure instead of 500ing the home-page hero stat tiles."""
+    try:
+        markets = market_engine.list_markets(limit=1000)
+        sys_analytics = analytics.get_system_stats()
+        return jsonify({
+            "total_markets": markets["total"],
+            "open_markets": len([m for m in markets["markets"] if m.get("status") == "OPEN"]),
+            "analytics": sys_analytics,
+        })
+    except Exception as e:
+        return jsonify({
+            "total_markets": 0,
+            "open_markets": 0,
+            "analytics": {},
+            "error": str(e),
+        }), 200
 
 
 # ─── Market Endpoints ─────────────────────────────────────────
