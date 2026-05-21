@@ -1031,6 +1031,19 @@ def not_found(e):
                            message="That page doesn't exist. Maybe the market was removed, or you mistyped the URL."), 404
 
 
+@app.errorhandler(ValueError)
+def bad_value(e):
+    """Catch malformed query/path params (e.g. ?page=foo) → JSON 400 on /api/*.
+
+    Without this, int() / float() conversion of bad input bubbles up as a
+    Flask 500 with an HTML body, which is hostile to API consumers.
+    """
+    if request.path.startswith("/api/"):
+        return jsonify({"error": "Bad request", "detail": str(e)}), 400
+    return render_template("error.html", code=400,
+                           message="Bad request — please check the URL or form values."), 400
+
+
 @app.errorhandler(500)
 def server_error(e):
     if request.path.startswith("/api/"):
